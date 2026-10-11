@@ -5,6 +5,31 @@
 > scripts that test them (all in this repo). Hand this file + `AGENTS.md`
 > (same folder) to any AI agent working on the scripts.
 
+## Image auto-scroll when picture arrives in open chat (2026-10-11)
+
+A picture row has no height until Coil decodes it, so the scroll that reaches a
+newly arrived row lands on the bottom as it was *before* the bitmap existed; the
+row then grows downward out of sight. The follow window that fixes this was
+keyed only on `conversationId`, so it opened when the chat opened and expired
+four seconds later — a picture arriving afterwards found every window closed and
+stayed clipped. The follow is now keyed on `newestId`, so each arrival opens its
+own window. The two duplicated follow effects were folded into one, and the
+redundant `lastVisible` guard went with them.
+
+Tests: `ScrollFollowGuardTest` (5 unit tests).
+
+**No `test-image-auto-scroll.sh`.** One was built and discarded: it delivers a
+real picture through the provider (a downloaded `m_type=132` row with a real
+part file, imported via the app's own resync) and asserts the decoded bubble
+clears the composer. It passes on unfixed code, because on the AVD Coil has the
+bitmap within ~1s of the row appearing — there is no zero-height phase for the
+race to be lost in. Enlarging the picture 20x changed nothing (identical bounds
+before and after). On a real device the load is a network download measured in
+seconds, which is what opens the gap this fix closes; that timing cannot be
+reproduced against a local provider read. Per the rule that a script which
+passes on broken code is worse than no script, the fix ships with the unit test
+alone and needs an on-device check before it is trusted.
+
 ## Unread badge + stale snippet when a picture arrives in an open chat (2026-10-11)
 
 A received picture while its chat is open left an unread badge of 1 after
