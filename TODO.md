@@ -5,6 +5,25 @@
 > scripts that test them (all in this repo). Hand this file + `AGENTS.md`
 > (same folder) to any AI agent working on the scripts.
 
+## Unread badge + stale snippet when a picture arrives in an open chat (2026-10-11)
+
+A received picture while its chat is open left an unread badge of 1 after
+going back to the list, and the list line still showed the previous text
+instead of "Photo".
+
+Two causes: `receiveMessage` and `importProviderMms` counted the message as
+unread unconditionally, so the screen's reactive `markRead` lost the race
+against the asynchronous MMS import. And `importProviderMms` never updated
+the conversation's snippet, timestamp, or direction.
+
+Fix: `Repository.viewedConversationId` (volatile) is set by ChatScreen on
+ON_RESUME and cleared on ON_PAUSE/dispose. Both unread bumps now skip the
+front conversation. `importProviderMms` collects affected conversations and
+calls `refreshConversationSnippetFor` after the loop.
+
+Tests: `ViewedConversationTest` (4) and `test-unread-while-viewing.sh` (4/0),
+`test-mms-snippet.sh` (5/0).
+
 ## Picking someone opens them, not a group (2026-10-10)
 
 Tapping "Alex" in the new-chat list opened the **Roadtrip** group. A group
