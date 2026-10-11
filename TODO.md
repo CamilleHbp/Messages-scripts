@@ -5,6 +5,64 @@
 > scripts that test them (all in this repo). Hand this file + `AGENTS.md`
 > (same folder) to any AI agent working on the scripts.
 
+## Tapping a message notification opens an empty thread (2026-10-12)
+
+Reported as: sent a message, got the notification, tapped it, and the incoming
+messages were not there.
+
+| Test | Script |
+|---|---|
+| `NotificationOpensGroupMemberTest` | `test-notification-open-group-member.sh` |
+
+**The cause was two things, not one.**
+
+`receiveMessage` stores an inbound text with `conversationForInboundBlocking`,
+which falls back to `soleGroupBlocking` — a group-only member's message belongs
+to the group. The notification resolved the address with the strict
+`conversationIdForAddress`, which has no group fallback and returns **null** for
+someone who only exists inside a group. `MainActivity`'s
+`?: getOrCreateConversationBlocking(addr)` then invented a conversation, so the
+tap opened a brand new empty thread while the real message sat in the group.
+
+Fixed by adding `conversationIdForIncoming` (the same pair storage uses) and
+pointing four call sites at it: the notification tap, the notification id, and
+the mark-as-read and delete actions — the latter two resolved null and
+**silently did nothing** for a group member.
+
+`writeSentToSystem` and the send-failed id deliberately keep the strict lookup:
+a sent row lives in the private 1:1, and loosening it files sent messages into
+a group.
+
+**Fixing the resolver alone was not enough.** The script kept failing with the
+resolver correct, and the reason was the second cause: on startup the app
+mirrors inbound SMS into the system provider and imports it back, and that
+import called `getOrCreateConversationBlocking` directly. It minted a private
+thread for the group-only member, which then **won** the lookup the fixed
+resolver used — so the phantom came back from a different direction. Sync now
+resolves through `conversationForInboundBlocking` too.
+
+**Two traps this cost, both worth keeping:**
+
+1. **`PRAGMA foreign_keys` is off on this connection.** The schema declares
+   `ON DELETE CASCADE`, but SQLite only honours it with the pragma set, so
+   deleting a conversation left its messages and recipients **orphaned**. The
+   script cleaned up in the wrong order and stale rows kept rendering on later
+   runs, which looked exactly like the bug reappearing. Clean children first.
+
+2. **Provider rows cannot be deleted from a shell.** Every `emu sms send` is
+   mirrored into the system provider, owned by the app; neither `content delete`
+   as shell nor via `run-as` can remove them, so each run re-imports them. The
+   script now uses **addresses unique per run**, which is what finally made it
+   deterministic — three consecutive clean passes.
+
+Verified failing on the pre-fix build (reverted, rebuilt, **reinstalled**) with
+both symptom checks red, then passing. The message-visible and phantom checks
+each caught the bug independently.
+
+Still open: a member of **two or more** groups. `soleGroupBlocking` returns null
+when ambiguous, so a private thread is still created for them. Pre-existing, and
+arguably right, but not covered here.
+
 ## Image auto-scroll when picture arrives in open chat (2026-10-11)
 
 A picture row has no height until Coil decodes it, so the scroll that reaches a
