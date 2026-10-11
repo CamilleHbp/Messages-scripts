@@ -318,6 +318,7 @@ named feature, and the README mirrors all 8:
 | Issue | Feature | JUnit | Regression script |
 |---|---|---|---|
 | #304 | App appears in SMS/text/image share sheets; accepts shared body/image; tapping an image opens a full-screen preview | `ManifestShareIntentFilterTest`, `ImagePreviewWiringTest` | `test-share-intent-filters.sh` |
+| #304 (follow-up) | A shared body arrives readable: Latin-1 mangled text repaired, `sms_body`/`EXTRA_TEXT` read, double decoding | `ShareTextTest` | `test-share-intent-body.sh` |
 
 Other apps (bank payment receipts, share-to-SMS) could not hand a message to us
 because `MainActivity` only declared `SENDTO` for the `smsto:` scheme and had no
@@ -457,6 +458,61 @@ changed a state list nothing read, and appeared to do nothing.
      aborts instead, the same guard `take-fdroid-screenshots.sh` uses. This one
      cost a real debugging detour: the failures looked like a regression in the
      code that had just been green.
+
+## #304 follow-up: a shared body arrived garbled (2026-10-11)
+
+The reporter confirmed the app now appears in Bank Mellat's share list, so the
+first half of #304 was right. Two problems remained, and they turned out to be
+different bugs with the same symptom.
+
+The garbled text is **Latin-1 mojibake**: `Ù…Ø±Ù†` is what UTF-8 bytes read one
+byte per char look like. The bank app escapes its own URI that way, so the body
+it hands over is already damaged, and we forwarded it verbatim — to the composer
+and then over the air. Confirmed against the screenshots, where the mangled run
+matched byte for byte.
+
+- **`ShareText.repairMojibake`** undoes it, but only when the result is
+  unambiguous: pure Latin-1, no non-Latin letter already present, and it turns
+  back into text that has one. `Café` stays untouched because `E9` alone is not
+  valid UTF-8. A malformed sequence is refused outright rather than replaced
+  with U+FFFD, which would swap one wrong body for another.
+- **The Latin range has to be `code < 0x0250`**, not `0x41..0x5A || 0xC0..0x24F`.
+  `ª` and `º` are letters at `00AA`/`00BA`, below `00C0`, and Persian receipts
+  produce both — so the tighter range read mangled text as non-Latin and the
+  repair never fired. The unit test caught this on its first run.
+- **`sms_body` is now read first.** Every other SMS app checks it before the
+  `?body=` query, and the order has to match theirs: an app that fills both
+  means the extra. Bank Mellat puts the receipt there, so we were taking the
+  URI's damaged copy and ignoring the clean one.
+- **`EXTRA_TEXT` is read on every action**, not only `ACTION_SEND` — the bank
+  fires `SENDTO`.
+- **`percentDecode` decodes twice.** `Uri.decode` undoes one layer, so a body
+  escaped twice reached the composer as literal `%D9%85` and was sent as those
+  eight characters. The second pass is a no-op unless escapes survive the first.
+  `+` is left alone: this is a URI, not an HTML form.
+- Consecutive `%XX` escapes decode as **one** character, not one per byte.
+  Decoding byte by byte would produce exactly the mojibake being fixed.
+
+- Tests: `ShareTextTest` (15) — query extraction, empty/absent `body`, double
+  decoding, the exact `sms_body`-style mangled receipt, `Café`/`Grüße` left
+  alone, malformed `%` preserved, `+` untouched.
+- Regression: `test-share-intent-body.sh` (new), 7 checks. Verified to **fail**
+  on the pre-fix build (**2 passed, 5 failed** — the two passes are the
+  no-regression controls), then **7 passed, 0 failed**.
+
+  Two traps in writing it, both of which made the script report a false pass:
+
+  1. **`iconv` cannot produce the mangled string.** This locale rejects the
+     Persian bytes it is handed, so it exits with an empty result rather than
+     the Latin-1 reading the sender actually sends — and an empty body trivially
+     "passes". Built with Python instead.
+  2. **An empty composer must not match.** `"" in x` is true for every `x`, so
+     the dropped-`sms_body` case read as a pass on the broken build. That check
+     is why the pre-fix run is 5 failures and not 3.
+
+  The composer is read from the `EditText` node specifically. Taking the longest
+  `text=` instead picks the contact header, which is as long as a short body and
+  is on screen whether or not the body arrived.
 
 ## #300 follow-up: screen wake still failed with Privacy mode on (2026-10-09)
 
