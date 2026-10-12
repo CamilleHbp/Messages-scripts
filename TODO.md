@@ -45,6 +45,85 @@ pref before the commit landed — a log from the callback showed
 under the app. The script now wakes the device before navigating and polls for
 the expected app-lock state instead of reading once.
 
+## #317 A conversation sent from another app never reaches the list (2026-10-12)
+
+Reporter sends an SMS from Contacts to a number never messaged before; the
+message delivers, but the conversation is in no page of the list. Opening the
+contact again makes it appear.
+
+| Test | Script |
+|---|---|
+| `MmsSupportTest` | `test-mms-timestamp-units.sh` |
+
+**The list has no paging.** `conversations()` returns every row with no
+`LIMIT`, so "not on any page" cannot mean pagination.
+
+**The real cause was the unit of the timestamp.** The list is
+`ORDER BY timestamp DESC`, and two rows on the device held
+`1791706107000000` — a date in the year 58000 — so they sorted above everything
+else *permanently* and every conversation sent afterwards sat beneath them.
+
+Two opposite unit errors, both from reading a provider date without
+normalising:
+
+- `MmsSupport.milliseconds` multiplied every value by 1000. Some carriers store
+  the MMS `date` in **milliseconds** already (`content://mms/117` carried
+  `date=1791706107000`), so those rows were scaled twice.
+- The **SMS** import stored `m.date` raw (the `INSERT INTO messages` in the
+  sync path). The SMS provider date is in *seconds*, so 275 imported rows read
+  as 1970.
+
+The app treats every timestamp as milliseconds — `TimeFormat` renders them with
+`Instant.ofEpochMilli`.
+
+Fixed on both ends: `milliseconds()` is unit-aware (and rejects values outside a
+plausible date range rather than storing them), the SMS import normalises, and a
+v27 migration heals rows already written.
+
+**The migration crashed the app on the first attempt**, which is the reason to
+run it on device: deriving the conversation timestamp from its newest message
+yields NULL for a conversation with nothing left, and `timestamp` is NOT NULL.
+Both tables are now fixed in place. A second trap sat behind it — scaling
+seconds up first pushed them above the floor, so the very next statement divided
+them straight back and the migration was a silent no-op. Both are recorded in
+the code.
+
+Verified failing on the pre-fix build with 5 red checks, the last of which is
+the reported symptom: the new conversation does not reach the top of the list.
+Passes 6/6 after.
+
+Still worth asking the reporter: whether conversations showing "Photo" sit at
+the very top of their list above everything recent. That is the fingerprint of
+this bug.
+
+### #317 follow-up: the contact-name refresh delay (2026-10-12)
+
+The reporter's later comments separate a second symptom from the timestamp bug:
+after sending from Contacts the row appears with the **number**, and the saved
+name only catches up after 20 minutes to 2 hours. Renaming or deleting a contact
+also kept the stale name.
+
+| Test | Script |
+|---|---|
+| `ContactNameCacheTest` | `test-contact-name-refresh.sh` |
+| `ContactRefreshWiringTest` | `test-contact-name-refresh.sh` |
+
+Root cause: the app watched only the SMS/MMS provider (`observeProviderChanges`)
+and re-resolved names only from `MainActivity.onResume` behind a 5-minute gate.
+A contact edited while Messages was in front (and no SMS/MMS touching the
+provider) was invisible until a resume happened to clear the gate.
+
+The in-memory `contactCache` (5-minute TTL) moved to `ContactNameCache`, and a
+new `ContactsContract` `ContentObserver` (`observeContactChanges`) drops the
+cache and re-runs `refreshContactNames` on a 500 ms debounce. It is registered
+from `MessagesApplication` and unconditionally from `onResume` (outside the
+gate).
+
+Regression: the script seeds a conversation with a fresh number and no contact,
+leaves the app on the list, then inserts and renames the contact underneath it
+without ever leaving the screen. Fails 1/3 pre-fix (the two refresh checks red),
+passes 3/3 after, on `emulator-5554`.
+
 ## Image auto-scroll when picture arrives in open chat (2026-10-11)
 
 A picture row has no height until Coil decodes it, so the scroll that reaches a
