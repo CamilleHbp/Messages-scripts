@@ -5,6 +5,46 @@
 > scripts that test them (all in this repo). Hand this file + `AGENTS.md`
 > (same folder) to any AI agent working on the scripts.
 
+## Security-scan cleanup: zip-slip, app-lock auth, overflow (2026-10-12)
+
+The code-scanning page runs CodeQL (`security-and-quality`), Semgrep and Trivy.
+Semgrep and Trivy are clean; CodeQL had 20 open alerts. This batch takes the two
+security findings and the correctness/dead-code notes (the deprecated-call notes
+are left for the `targetSdk 37` migration).
+
+| Alert | Where | Change |
+|---|---|---|
+| #489 high zipslip | `data/SmsIeReader.kt` | the staged part path is proven inside `partsDir` (`canonicalFile.parentFile == partsDir.canonicalFile`), rejecting `.`/`..` |
+| #490 medium insecure-local-authentication | `ui/AppLockVerification.kt` | the prompt is tied to `MessageLockCrypto`'s auth-bound key via a `CryptoObject`, and the returned cipher must pass `proveAuth()` before `Verified` |
+| #494 int-multiplication-to-long | `mms/.../AttachmentFitter.kt` | `partCount.toLong() * 512` |
+| #491-493 whitespace-precedence | `mms/.../pdu/Wsp.kt` | parenthesise infix `and` before the comparison |
+| #80 #81 #496 #498 unused locals | `Repository`, `SettingsScreen`, `LegacySettingsScreen`, `ScheduledMessagesScreen` | dropped |
+
+The zip-slip entry name was already flattened by `substringAfterLast('/')`, so
+#489 was not exploitable on Android (backslash is not a separator); the guard
+makes the invariant explicit and survives a refactor. The staging tests in
+`SmsIeReaderStagingTest` pin it (`../../pwned.bin`, a bare `..`).
+
+Root cause for #490: the `BiometricPrompt` callback was applied as a bare
+boolean, which a UI-hooking tool can flip. It now runs a real crypto operation
+with the authenticated Keystore cipher, the same pattern `ChatScreen` already
+uses for message locks. A null cipher stays accepted so an API 29 PIN-only user
+is not locked out.
+
+Tests: `SmsIeReaderStagingTest` (+2), `AppLockVerificationWiringTest` (+3, incl.
+the verdict table), `BudgetPolicyTest` (+1, fails pre-fix). The source-pinning
+regression is `test-codescan-security-cleanup.sh` — fails 9/12 pre-fix, 12/12
+after, on `emulator-5554`.
+
+`test-app-lock-verification.sh` needed two harness fixes. "The prompt was
+satisfied but App lock was not enabled" was a race: the setting is written
+through SharedPreferences, which applies asynchronously, so the script read the
+pref before the commit landed — a log from the callback showed
+`succeeded cipher=true proof=true` and the pref was `true` a moment later. The
+"could not reach the App lock row" sections were the emulator screen sleeping
+under the app. The script now wakes the device before navigating and polls for
+the expected app-lock state instead of reading once.
+
 ## Image auto-scroll when picture arrives in open chat (2026-10-11)
 
 A picture row has no height until Coil decodes it, so the scroll that reaches a
