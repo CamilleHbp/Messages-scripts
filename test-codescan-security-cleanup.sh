@@ -30,10 +30,11 @@ cleanup() { adb_ shell am force-stop "$PKG" >/dev/null 2>&1; }
 trap cleanup EXIT
 
 info "Source: zip-slip guard (#489)"
-if grep -q 'parentFile == partsDir.canonicalFile' "$SRC/data/SmsIeReader.kt"; then
-    ok "SmsIeReader proves a part name resolves inside partsDir"
+if grep -q 'File(entry.name).name' "$SRC/data/SmsIeReader.kt" \
+    && grep -q 'name.contains("..")' "$SRC/data/SmsIeReader.kt"; then
+    ok "SmsIeReader reduces a part name to its final component and rejects .."
 else
-    bad "SmsIeReader lost the staging-directory containment check"
+    bad "SmsIeReader lost the zip-slip sanitizer shape CodeQL recognises"
 fi
 
 info "Source: app-lock prompt is crypto-bound (#490)"

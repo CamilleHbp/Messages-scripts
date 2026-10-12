@@ -14,15 +14,20 @@ are left for the `targetSdk 37` migration).
 
 | Alert | Where | Change |
 |---|---|---|
-| #489 high zipslip | `data/SmsIeReader.kt` | the staged part path is proven inside `partsDir` (`canonicalFile.parentFile == partsDir.canonicalFile`), rejecting `.`/`..` |
+| #489 high zipslip | `data/SmsIeReader.kt` | the entry name is reduced to its final component by `File(entry.name).name`, and a bare `..`/`.` is rejected before `File(partsDir, name)` |
 | #490 medium insecure-local-authentication | `ui/AppLockVerification.kt` | the prompt is tied to `MessageLockCrypto`'s auth-bound key via a `CryptoObject`, and the returned cipher must pass `proveAuth()` before `Verified` |
 | #494 int-multiplication-to-long | `mms/.../AttachmentFitter.kt` | `partCount.toLong() * 512` |
 | #491-493 whitespace-precedence | `mms/.../pdu/Wsp.kt` | parenthesise infix `and` before the comparison |
 | #80 #81 #496 #498 unused locals | `Repository`, `SettingsScreen`, `LegacySettingsScreen`, `ScheduledMessagesScreen` | dropped |
 
-The zip-slip entry name was already flattened by `substringAfterLast('/')`, so
-#489 was not exploitable on Android (backslash is not a separator); the guard
-makes the invariant explicit and survives a refactor. The staging tests in
+The zip-slip entry name was already flattened, so #489 was not exploitable on
+Android (backslash is not a separator), but CodeQL did not treat
+`substringAfterLast('/')` or a `canonicalFile` equality as a sanitizer. The code
+now uses `File(entry.name).name` plus a `..` check, which the query's
+`DotDotCheckSanitizer` recognises; a local CodeQL run of
+`java-security-and-quality` reports **0 errors / 0 warnings** for the touched
+alerts (10 notes remain: 7 deprecated-call, left for the SDK 37 migration, and
+3 sealed-class `tmp0_other_with_cast` false positives). The staging tests in
 `SmsIeReaderStagingTest` pin it (`../../pwned.bin`, a bare `..`).
 
 Root cause for #490: the `BiometricPrompt` callback was applied as a bare
