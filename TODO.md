@@ -56,6 +56,34 @@ Still worth asking the reporter: whether conversations showing "Photo" sit at
 the very top of their list above everything recent. That is the fingerprint of
 this bug.
 
+### #317 follow-up: the contact-name refresh delay (2026-10-12)
+
+The reporter's later comments separate a second symptom from the timestamp bug:
+after sending from Contacts the row appears with the **number**, and the saved
+name only catches up after 20 minutes to 2 hours. Renaming or deleting a contact
+also kept the stale name.
+
+| Test | Script |
+|---|---|
+| `ContactNameCacheTest` | `test-contact-name-refresh.sh` |
+| `ContactRefreshWiringTest` | `test-contact-name-refresh.sh` |
+
+Root cause: the app watched only the SMS/MMS provider (`observeProviderChanges`)
+and re-resolved names only from `MainActivity.onResume` behind a 5-minute gate.
+A contact edited while Messages was in front (and no SMS/MMS touching the
+provider) was invisible until a resume happened to clear the gate.
+
+The in-memory `contactCache` (5-minute TTL) moved to `ContactNameCache`, and a
+new `ContactsContract` `ContentObserver` (`observeContactChanges`) drops the
+cache and re-runs `refreshContactNames` on a 500 ms debounce. It is registered
+from `MessagesApplication` and unconditionally from `onResume` (outside the
+gate).
+
+Regression: the script seeds a conversation with a fresh number and no contact,
+leaves the app on the list, then inserts and renames the contact underneath it
+without ever leaving the screen. Fails 1/3 pre-fix (the two refresh checks red),
+passes 3/3 after, on `emulator-5554`.
+
 ## Image auto-scroll when picture arrives in open chat (2026-10-11)
 
 A picture row has no height until Coil decodes it, so the scroll that reaches a
