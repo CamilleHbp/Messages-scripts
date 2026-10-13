@@ -5,6 +5,37 @@
 > scripts that test them (all in this repo). Hand this file + `AGENTS.md`
 > (same folder) to any AI agent working on the scripts.
 
+## Group creation outcome, empty groups, multi-select pictures (2026-10-14)
+
+Follow-ups to the #326/#327 batch, from the same tester:
+
+- **Finishing "Add people" landed on the contact details page**, so Back walked
+  into the old 1:1. `MainActivity` now opens the *new group's chat*
+  (`chatId = newId; navRoute = "chat"`), and Back from there goes to the list.
+- **An empty group vanished** from the conversation list. `trashConversationIfEmptySuspend`
+  trashed any conversation with no messages/scheduled/draft on leaving the chat;
+  a group is a thread the user built on purpose, so `ConversationLiveness.keepAlive`
+  now takes `recipientCount` and keeps a conversation with more than one member.
+  A 1:1 with nothing in it is still trashed.
+- **The gallery was single-select.** Google Messages lets you pick several photos
+  in one pass; `ChatScreen` now uses `PickMultipleVisualMedia` (confirm with
+  "Add (N)"), de-dupes against what is already staged, and the whole set still
+  waits in the composer until Send.
+
+Tests: `ContactDetailsWiringTest.creatingAGroupDropsYouIntoTheNewChat`,
+`ConversationLivenessTest` (+2). Regression script
+`test-group-add-people-outcome.sh` — lands in the group chat, Back reaches the
+list, and an empty group survives leaving its chat. It scrolls the list to the
+top first: the list keeps its scroll position across navigation and the new
+group is newest. `test-pending-media.sh` was updated to the multi-select flow
+and now asserts two staged thumbnails and two sent pictures.
+
+Note for scripts: `uiautomator` on this AVD started failing with
+"UiAutomationService already registered" and returning **stale** dumps; the
+`android layout` CLI stayed reliable. `test-group-add-people-outcome.sh` uses
+the `layout_*` helpers throughout. If a list assertion looks wrong, check the
+list is scrolled to the top before believing it.
+
 ## Add people from a chat, staged pictures, triage workflow (#325/#326/#327) (2026-10-14)
 
 Three user reports, fixed together on `fix/issues-325-326-327`:
