@@ -5,6 +5,42 @@
 > scripts that test them (all in this repo). Hand this file + `AGENTS.md`
 > (same folder) to any AI agent working on the scripts.
 
+## Add people from a chat, staged pictures, triage workflow (#325/#326/#327) (2026-10-14)
+
+Three user reports, fixed together on `fix/issues-325-326-327`:
+
+- **#327 "Add people" did nothing.** The chat overflow item was wired to
+  `onAddPeople = { /* no-op: MMS group chat, stub */ }`. `ChatScreen` now takes
+  an `onAddPeople` callback; `MainActivity` opens the existing `add-people`
+  picker for the chat's own conversation (`detailsId = chatId`) and remembers
+  where it was opened from (`addPeopleReturn`), so the picker's back returns to
+  the chat instead of the contact details. The details path still opens the
+  same picker.
+- **#326 pictures sent on pick.** The gallery and camera launchers called
+  `vm.sendMediaMessage(...)` the moment the picker closed. They now stage the
+  `Uri` in a `pendingMedia` list; the composer shows a removable thumbnail strip
+  and the send button enables for an attachment with no text. `sendPendingMedia()`
+  sends them on Send, with the draft as the first picture's caption. `InputBar`
+  gained `hasAttachments` so an empty draft can still be sent with a picture.
+- **#325 triage failed every comment.** `crmne/copilot-triage` rejects any
+  `reasoning-effort` outside `none/low/default` (`ArgumentError in reasoning_flag`,
+  `assessment.rb:834`), and the workflow forwarded `vars.TRIAGE_REASONING_EFFORT`
+  bare — an unset repo variable is an empty string, i.e. a *present* input, so it
+  overrode the action default. `model`, `reasoning-effort` and `dry-run` now each
+  carry a fallback (`|| 'low'`, `|| 'gpt-5.6-luna'`, `|| false`).
+
+Tests: `AddPeopleFromChatWiringTest`, `PendingMediaWiringTest`,
+`TriageWorkflowDefaultsTest` pin the wiring; `ContactDetailsWiringTest`'s
+Add-people anchor was widened to allow the return-route reset. Regression
+scripts: `test-chat-add-people.sh` (fails pre-fix — the menu did nothing),
+`test-pending-media.sh` (seeds a MediaStore picture, drives the system picker,
+asserts 0 outgoing images while staged then 1 after Send; fails pre-fix),
+`test-triage-workflow.sh` (static — the workflow has no runtime path).
+
+Known pre-existing: `test-group-create.sh` fails on Develop unchanged (it still
+expects a "Group name" field that `AddPeopleScreen` no longer has); not caused
+by this batch.
+
 ## Security-scan cleanup: zip-slip, app-lock auth, overflow (2026-10-12)
 
 The code-scanning page runs CodeQL (`security-and-quality`), Semgrep and Trivy.
