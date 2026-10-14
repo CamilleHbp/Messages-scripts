@@ -151,7 +151,7 @@ sq "delete from messages where conversation_id in
 OPENED=0
 for i in 1 2 3; do
     adb_ shell am start -n "$ACT" --es open_conversation_address "$PRIMARY" >/dev/null
-    if wait_for_text "More options" 15; then OPENED=1; break; fi
+    if wait_layout_has "More options" 6; then OPENED=1; break; fi
     adb_ shell am force-stop "$PKG"; sleep 2
 done
 if [ "$OPENED" = "1" ]; then
@@ -202,7 +202,7 @@ if tap_layout "Add (" >/dev/null; then
 else
     bad "no multi-select Add button — the picker is not multi-select"
 fi
-if wait_for_text "More options" 10 || layout_has "More options"; then
+if wait_layout_has "More options" 10; then
     ok "returned to the chat"
 else
     bad "did not return to the chat after picking"

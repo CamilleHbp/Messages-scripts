@@ -48,7 +48,7 @@ else
 fi
 
 info "The picker must open (not stay on the chat)"
-if wait_for_text "Create group" 8 || layout_has "Create group"; then
+if wait_layout_has "Create group" 8; then
     ok "the add-people picker opened"
 else
     bad "Add people did nothing — the picker never opened"
@@ -61,7 +61,7 @@ fi
 
 info "Back returns to the chat"
 adb_ shell input keyevent 4 >/dev/null; sleep 1.5
-if wait_for_text "More options" 8 || layout_has "More options"; then
+if wait_layout_has "More options" 8; then
     ok "back returned to the chat"
 else
     bad "back did not return to the chat"

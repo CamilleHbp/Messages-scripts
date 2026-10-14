@@ -5,6 +5,38 @@
 > scripts that test them (all in this repo). Hand this file + `AGENTS.md`
 > (same folder) to any AI agent working on the scripts.
 
+## Adding people to an existing group; stale group-test fixes (2026-10-14)
+
+- **Adding people to a group created a second group.** `AddPeopleScreen` always
+  called `createGroupFrom`, so adding Dad to "Alex + Bank" produced a separate
+  "Alex + Dad" and left the original at two members. `AppViewModel.finishAddPeople`
+  now branches: a group gets `repo.addParticipants` (append in place) and keeps
+  its id; a 1:1 still starts a new thread. The send path is untouched — it still
+  reads `conversation_recipients`, which now has the extra member.
+- **The automatic group name now grows with its members.** `ensureGroupTitle`
+  recomputes unless a name was typed. A new `conversations.group_title_custom`
+  flag (DB v28) records which is which, set by `setGroupTitle`, so a user's name
+  survives a later add.
+- `addParticipants` already existed and had no callers; it is the append path now.
+
+Test fixes (all pre-existing, unrelated to the feature):
+- `test-group-chat.sh` §7/§8 assumed `conversations.address` was unique; the
+  migration that dropped it (`dropConversationAddressUnique`) means `insert or
+  replace` adds a row, so `make_group` returned a multi-line id and the section
+  could never build its group. `make_group` now takes `max(id)`, and §7 leaves a
+  single conversation at the address so §8's "open by address" is unambiguous.
+- `test-group-create.sh` still expected the "Group name" field that moved to the
+  group's page. Rewritten for the current flow: the picker creates a group named
+  from its members, lands in the group chat, and the empty group survives leaving.
+- `test-group-send-duplicates.sh` tapped the composer via uiautomator (unreliable
+  on this AVD) and matched "Send" as a substring — which hit the probe message
+  body `GroupSendProbe…`. It now focuses the EditText through the layout dump and
+  matches "Send" exactly.
+
+New regression `test-group-add-member.sh`: adding to an existing group keeps one
+group, appends the member, grows the auto name, and leaves a typed name alone
+(fails pre-fix — a second group is created).
+
 ## Group creation outcome, empty groups, multi-select pictures (2026-10-14)
 
 Follow-ups to the #326/#327 batch, from the same tester:

@@ -51,7 +51,7 @@ sq "delete from messages where conversation_id in
 OPENED=0
 for i in 1 2 3; do
     adb_ shell am start -n "$ACT" --es open_conversation_address "$PRIMARY" >/dev/null
-    if wait_for_text "More options" 15; then OPENED=1; break; fi
+    if wait_layout_has "More options" 6; then OPENED=1; break; fi
     adb_ shell am force-stop "$PKG"; sleep 2
 done
 [ "$OPENED" = "1" ] && ok "1:1 chat opened" || { bad "1:1 chat did not open"; echo; echo "Results: $PASS passed, $FAIL failed"; exit 1; }
