@@ -139,6 +139,23 @@ Known pre-existing: `test-group-create.sh` fails on Develop unchanged (it still
 expects a "Group name" field that `AddPeopleScreen` no longer has); not caused
 by this batch.
 
+## Legacy "Swipe actions" master switch (2026-10-14, #331)
+
+`SettingsStore.swipeActionsEnabled` read as a hardcoded `true`, so the legacy
+settings toggle was always checked and its writes to the old
+`swipe_actions_enabled` key were ignored — the per-direction actions
+(`swipe_left_action` / `swipe_right_action`), which the list actually reads, never
+changed. It is now a view over that pair: off sets both directions OFF, on
+restores the pre-de-per-direction archive/delete pair (honouring legacy reverse).
+New `SwipeAction.anyEnabled(left, right)` carries the predicate.
+
+- JUnit: `SwipeActionTest.anyEnabledIsFalseOnlyWhenBothDirectionsAreOff`,
+  `theMasterSwitchFollowsTheLegacyPairItWrites`.
+- Script: `test-swipe-master-toggle.sh`. Verified on `emulator-5554` (SDK 35): it
+  fails on the old `get() = true` code and passes with the fix.
+  Note the AVD trap — the row is the last one and its switch sits under the
+  gesture inset, so the script taps the switch's own top edge, not the label.
+
 ## No-network permission + picture-MMS notification (2026-10-14)
 
 Two fixes on the app branch `fix/332-remove-internet-permission` (based on `Develop`).
