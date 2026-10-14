@@ -5,6 +5,41 @@
 > scripts that test them (all in this repo). Hand this file + `AGENTS.md`
 > (same folder) to any AI agent working on the scripts.
 
+## "Highlight links" over-rounded in the new UI (2026-10-14)
+
+- **On Link behaviour, "Highlight links" had the group's outer 12dp bottom
+  corners while it still sat above "Link open warning".** Its position was
+  `if (hideLinks) MIDDLE else LAST`, so with hiding off it rounded like the
+  last row. The row always has the warning below it, so it is now
+  unconditionally `RowPosition.MIDDLE` — all four corners at the inner 4dp,
+  matching "Hide links from messages".
+- Corner radii are pixels with no text equivalent, so `SettingsRow` now emits a
+  `SettingsRowShape` logcat marker (`title position topStart topEnd bottomStart
+  bottomEnd`), the same idea as the chat `BubbleShape` marker. It reads the
+  rows' actual `rowCorners(position)`, so it cannot drift from what is drawn.
+- `LinkSettingsRowPositionTest` pins the group: three rows, FIRST/MIDDLE/LAST,
+  and no `RowPosition.LAST` for the highlight row.
+- `test-link-row-corners.sh` opens the page and asserts the three markers —
+  fails pre-fix (`Highlight links position=LAST bottomStart=12.0 …`), passes
+  after.
+
+## Delay-before-sending picker clipped in the new UI (2026-10-14)
+
+- **The redesigned "Inbox settings → Delay seconds" picker showed only `1s`**
+  (plus Cancel); `3s/5s/10s/30s` were missing. Each option row in
+  `InboxSettingsScreen`'s delay dialog used `Modifier.fillMaxSize()`, so every
+  row claimed the dialog's whole height and all but the first were laid out
+  below the window. It is a **single-line** fix: `fillMaxWidth()`.
+- The row also regressed two details against the legacy dialog: it was no
+  longer `clickable` (only the radio selected) and the
+  `settings_choose_delay` hint had been dropped. Both restored; keep the two
+  dialogs in step.
+- `DelayDialogOptionsTest` pins the option rows to `fillMaxWidth` (and no
+  `fillMaxSize`), the option list, the hint, and the row-level click.
+- `test-delay-dialog-options.sh` drives the real dialog and asserts every
+  option via `android layout` (uiautomator segfaulted on this AVD) — fails on
+  the broken APK with 5 missing options, passes after.
+
 ## Adding people to an existing group; stale group-test fixes (2026-10-14)
 
 - **Adding people to a group created a second group.** `AddPeopleScreen` always
