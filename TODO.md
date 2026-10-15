@@ -5,6 +5,42 @@
 > scripts that test them (all in this repo). Hand this file + `AGENTS.md`
 > (same folder) to any AI agent working on the scripts.
 
+## MMS that arrives with mobile data off: wait for data, then a deferred re-check (2026-10-15)
+
+Follow-up to #328, after @Zokii0's report that an MMS does not fetch when mobile
+data is off. MMS requiring data is expected; what was wrong is what the app did
+about it.
+
+- **`MMS_ERROR_NO_DATA_NETWORK` (8) and `MMS_ERROR_DATA_DISABLED` (11) fell
+  through `MmsRetry.classify()`'s `else` to `MANUAL_RETRY`.** There is no UI to
+  retry one, and the state was dropped. They now classify as a new
+  `MmsRetry.WAIT_FOR_DATA` that is retryable and, in `MmsDownloader.onComplete`,
+  gives the attempt back (`attempt.count = (attempt.count - 1)`) so three data
+  outages cannot burn the automatic budget.
+- **After `MAX_AUTO_ATTEMPTS` a transient failure was never retried again.**
+  `shouldRetryNow()` returned false at the limit and the map entry was never
+  removed, so the row was stuck until the process died. Past the budget it now
+  retries on the longest cooldown (`MAX_DELAY_MS`); `requestPending()` also
+  drops any budget-exhausted entry, so opening the app gives it a fresh one.
+- **New deferred re-check (`MmsRecheckScheduler` + `MmsRecheckWorker`).** The
+  on-open sweep only runs in the foreground and the in-process retry is a
+  `Handler` that dies with the process, so an MMS with data off waited for the
+  next open. A unique `OneTimeWorkRequest` with `NetworkType.NOT_REQUIRED` and
+  WorkManager exponential backoff (15 min, doubling) now re-runs `requestPending`
+  and retries while a row is pending, stopping when nothing is left. **No new
+  permission** — option 2 (`registerNetworkCallback` / `ACCESS_NETWORK_STATE`)
+  was rejected to keep #332 intact.
+- Debug probe `--ei mms_recheck_probe <resultCode>` (MainActivity) hands the
+  downloader a synthetic completion, since the real one only comes from the
+  non-exported `MmsDownloadReceiver`.
+- JUnit: extended `MmsRetryTest` (WAIT_FOR_DATA classification, retryable and
+  budget-independent, post-budget cooldown) and new `MmsRecheckSchedulerTest`
+  (permission-free, backoff not reset, bounded retry, downloader wiring).
+- Script: `test-mms-recheck.sh`. **Verified** on `emulator-5554` (SDK 35): 6/6
+  pass; with the classify change reverted it reports 3 FAILs, so it is not
+  vacuous. `test-mms-retry.sh` (7/7) and `test-no-network-permission.sh` (4/4)
+  still pass.
+
 ## "Highlight links" over-rounded in the new UI (2026-10-14)
 
 - **On Link behaviour, "Highlight links" had the group's outer 12dp bottom
