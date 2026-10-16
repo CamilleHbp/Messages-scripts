@@ -1,5 +1,12 @@
 # TODO
 
+## Send-button countdown (2026-10-16)
+
+- [x] Countdown and cancel action beside the composer; no top banner.
+- [x] Preserve canceled, edited, shared, and saved drafts.
+- [x] JVM suite: 880 tests pass. Emulator regression: 9 checks pass on Android 37.
+- [x] Baseline APK rejects the new countdown-placement assertion.
+
 > Moved from the Messages app repo (2026-09-13). This is the project's
 > task/tracking history — issues, verification notes, and the regression
 > scripts that test them (all in this repo). Hand this file + `AGENTS.md`
