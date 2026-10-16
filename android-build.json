@@ -1,6 +1,35 @@
 {
-  "tasks": [":app:assembleDebug", ":app:assembleRelease"],
-  "clean_tasks": [":app:clean", ":mms:clean"],
-  "required_variants": {"app": ["debug", "release"]},
-  "source_globs": ["app/**", "mms/**", "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "local.properties", "gradle/**", "gradlew", "gradlew.bat"]
+  "tasks": [
+    ":app:assembleDebug",
+    ":app:assembleRelease"
+  ],
+  "clean_tasks": [
+    ":app:clean",
+    ":mms:clean"
+  ],
+  "required_variants": {
+    "app": [
+      "debug",
+      "release"
+    ]
+  },
+  "source_globs": [
+    "app/src/main/**",
+    "app/src/debug/**",
+    "app/src/release/**",
+    "app/build.gradle.kts",
+    "app/proguard-rules.pro",
+    "mms/src/main/**",
+    "mms/src/debug/**",
+    "mms/src/release/**",
+    "mms/build.gradle.kts",
+    "mms/consumer-rules.pro",
+    "build.gradle.kts",
+    "settings.gradle.kts",
+    "gradle.properties",
+    "local.properties",
+    "gradle/**",
+    "gradlew",
+    "gradlew.bat"
+  ]
 }
