@@ -2236,3 +2236,9 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] Two visible schedules, chronological overflow, reschedule, send-now, cancellation, and conversation isolation.
 - [x] ScheduledTrayTest and ScheduledDeliveryWiringTest; app JVM suite: 885 tests passed.
 - [x] test-scheduled-tray.sh: 17 checks passed; baseline failed the collapsed-tray assertion.
+
+### Compact scheduled-message tray
+
+- [x] One scheduled message with inline +N overflow; hidden messages remain accessible in the queue sheet.
+- [x] ScheduledTrayTest updated for one visible slot and promotion after removal; 885 app JVM tests passed.
+- [x] test-scheduled-tray.sh asserts one visible row and inline overflow; failed on the previous two-row APK and passed all 18 checks on the compact build.
