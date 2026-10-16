@@ -2258,3 +2258,11 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] One scheduled message with inline +N overflow; hidden messages remain accessible in the queue sheet.
 - [x] ScheduledTrayTest updated for one visible slot and promotion after removal; 885 app JVM tests passed.
 - [x] test-scheduled-tray.sh asserts one visible row and inline overflow; failed on the previous two-row APK and passed all 18 checks on the compact build.
+
+### Compact tray release 1.0.30-camille.2
+
+- [x] Updated scheduled-message feature branch and integrated it into main.
+- [x] Merged JVM suite and all 18 compact-tray emulator checks passed.
+- [x] Light/dark 1.3x text captures reviewed; before/after and combined countdown comparisons refreshed.
+- [x] Clean debug and signed release builds verified after final Android changes.
+- [x] Published 1.0.30-camille.2-35; server catalogue, public artifact sizes/SHA-256, versioned/latest URLs, and download filenames verified.
