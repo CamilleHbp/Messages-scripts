@@ -37,14 +37,16 @@ ROW_NAME=""
 find_row() {
     dump_ui || return 1
     for n in Jake Sarah Mom Anindra Eeee Test Emma Dad Alex Work DK-VHDFC-S G-VERIFY 01 99 +1-555-123-0001; do
-        grep -q "text=\"$n\"" "$TMP/ui.xml" && { ROW_NAME="$n"; return 0; }
+        if grep -qF "text=\"$n\"" "$TMP/ui.xml" || grep -qF "content-desc=\"$n." "$TMP/ui.xml"; then
+            ROW_NAME="$n"; return 0
+        fi
     done
     return 1
 }
 open_chat() {
     adb_ shell am force-stop "$PKG" >/dev/null; sleep 1
     adb_ shell am start -n "$ACT" >/dev/null; sleep 3.5
-    find_row && tap_text "$ROW_NAME"
+    find_row && tap_contains "$ROW_NAME"
     sleep 2.5
 }
 
@@ -54,15 +56,15 @@ adb_ shell am start -n "$ACT" >/dev/null; sleep 3.5
 
 open_profile() {
     find_row || { fail "no conversation row"; return 1; }
-    tap_text "$ROW_NAME" >/dev/null; sleep 2
+    tap_contains "$ROW_NAME" >/dev/null; sleep 2
     # chat title shows the contact name (or formatted number) — tap it
-    tap_text "$ROW_NAME" >/dev/null || tap_desc "More options" >/dev/null
+    tap_contains "$ROW_NAME" >/dev/null || tap_desc "More options" >/dev/null
     sleep 2.5
 }
 
 info "1. Back button from chat -> list"
 find_row || { fail "no conversation row found"; exit 1; }
-tap_text "$ROW_NAME" >/dev/null || { fail "row missing"; exit 1; }
+tap_contains "$ROW_NAME" >/dev/null || { fail "row missing"; exit 1; }
 sleep 2.5
 if ! in_chat; then fail "chat did not open"; exit 1; fi
 adb_ shell input keyevent 4; sleep 2
@@ -85,7 +87,7 @@ tap_edittext; type_text "btnDraft"; sleep 0.5
 adb_ shell input keyevent 4; sleep 1   # first back closes the IME
 adb_ shell input keyevent 4; sleep 2   # second back leaves the chat
 on_list || fail "did not return to list"
-tap_text "$ROW_NAME" >/dev/null; sleep 2
+tap_contains "$ROW_NAME" >/dev/null; sleep 2
 dump_ui && grep -q 'text="[^"]*btnDraft' "$TMP/ui.xml" \
     && pass "draft restored on reopen (was saved by button-back)" \
     || fail "draft lost when leaving via button-back"
@@ -101,8 +103,13 @@ on_list && alive && pass "back from settings lands on list" || fail "back from s
 info "6. Back from trash -> settings"
 adb_ shell am force-stop "$PKG"; sleep 1
 adb_ shell am start -n "$ACT" --ez open_settings true >/dev/null; sleep 3.5
-adb_ shell input swipe 540 1800 540 600 300; sleep 1   # Trash row sits below the fold
-tap_text "Trash" || { fail "Trash row not found"; exit 1; }
+TRASH_ROW=""
+for attempt in 1 2 3 4 5; do
+    TRASH_ROW=$(center_of "Trash") && break
+    adb_ shell input swipe 540 1800 540 600 300; sleep 1
+done
+[ -n "$TRASH_ROW" ] || { fail "Trash row not found"; exit 1; }
+adb_ shell input tap $TRASH_ROW
 sleep 2
 adb_ shell input keyevent 4; sleep 2
 dump_ui && grep -qiE "Appearance|Backup|Notifications" "$TMP/ui.xml" \

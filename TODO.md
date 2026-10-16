@@ -2243,3 +2243,13 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] Two visible schedules, chronological overflow, reschedule, send-now, cancellation, and conversation isolation.
 - [x] ScheduledTrayTest and ScheduledDeliveryWiringTest; app JVM suite: 885 tests passed.
 - [x] test-scheduled-tray.sh: 17 checks passed; baseline failed the collapsed-tray assertion.
+
+### Combined personal Messages release 1.0.30-camille.1
+
+- [x] Integrated both independent feature branches on main.
+- [x] Combined JVM suite: 893 app and 315 MMS tests passed.
+- [x] Combined emulator regressions: 9 countdown and 17 scheduled-tray checks passed.
+- [x] Back-navigation test passed after clearing the synthetic comparison draft. Back-stack sections 1–5 passed; sections 6–7 passed after making the Trash selector wait and scroll. Conversation selectors accept merged accessibility labels.
+- [x] Light/dark and 1.3x font captures reviewed; no material design fixes.
+- [x] Clean debug and signed release APK build gate and verification passed.
+- [x] Published release 1.0.30-camille.1-34; server integrity, public sizes/hashes, versioned/latest URLs, and download filenames verified.
