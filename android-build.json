@@ -1,0 +1,6 @@
+{
+  "tasks": [":app:assembleDebug", ":app:assembleRelease"],
+  "clean_tasks": [":app:clean", ":mms:clean"],
+  "required_variants": {"app": ["debug", "release"]},
+  "source_globs": ["app/**", "mms/**", "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "local.properties", "gradle/**", "gradlew", "gradlew.bat"]
+}

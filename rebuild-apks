@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+MESSAGES_PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+exec python3 - "$MESSAGES_PROJECT_DIR" <<'PYBUILD'
+import json, os, pathlib, subprocess, sys
+root = pathlib.Path(sys.argv[1])
+config = pathlib.Path.home() / '.android/messages/signing.json'
+if not config.is_file():
+    raise SystemExit('Messages signing configuration missing: ' + str(config))
+env = os.environ.copy()
+env.update(json.loads(config.read_text()))
+runner = pathlib.Path.home() / '.codex/scripts/android_build_gate.py'
+subprocess.run([sys.executable, str(runner), 'build', '--project', str(root)], env=env, check=True)
+subprocess.run([sys.executable, str(runner), 'verify', '--project', str(root)], env=env, check=True)
+PYBUILD
