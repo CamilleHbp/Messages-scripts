@@ -191,24 +191,25 @@ db "BEGIN;
 
 adb_ shell am start -n "$ACT" --es open_conversation_address "$NUM" >/dev/null
 wait_text "$FIRST" || fatal "first scheduled message missing from its conversation"
-ui_query has "$SECOND" && pass "second schedule is visible" || fatal "second schedule missing"
-if ui_query has "$THIRD" || ui_query has "$CONTROL"; then
-    fatal "collapsed tray leaks a third schedule or another conversation"
+if ui_query has "$SECOND" || ui_query has "$THIRD" || ui_query has "$CONTROL"; then
+    fatal "collapsed tray shows more than one schedule or another conversation"
 fi
-[ "$(ui_query count 'Manage scheduled messages')" = "2" ] && pass "collapsed tray has exactly two management icons" || fatal "collapsed tray does not expose two management icons"
-ui_query has '+1 more' && pass "overflow reports one additional schedule" || fatal "overflow control missing"
-if python3 - "$TMP/ui.xml" "$FIRST" "$SECOND" <<'PY'
+pass "only the next scheduled message is visible"
+[ "$(ui_query count 'Manage scheduled messages')" = "1" ] && pass "collapsed tray has one management icon" || fatal "collapsed tray does not expose one management icon"
+ui_query has '+2 more' && pass "overflow reports two additional schedules" || fatal "overflow control missing"
+if python3 - "$TMP/ui.xml" "$FIRST" '+2 more' <<'PY'
 import re, sys, xml.etree.ElementTree as ET
 nodes = list(ET.parse(sys.argv[1]).getroot().iter('node'))
 def box(n): return list(map(int, re.findall(r'\d+', n.get('bounds', ''))))
 def find(t): return next(n for n in nodes if n.get('text') == t)
 a, b = box(find(sys.argv[2])), box(find(sys.argv[3]))
 inputs = [box(n) for n in nodes if n.get('class') == 'android.widget.EditText']
-assert inputs and a[1] < b[1] and b[3] <= inputs[0][1]
+assert inputs and max(a[3], b[3]) <= inputs[0][1]
+assert max(a[1], b[1]) < min(a[3], b[3]), "overflow occupies a separate row"
 PY
-then pass "schedules are chronological and above the composer"; else fatal "tray order or placement is wrong"; fi
+then pass "next schedule and overflow share one row above the composer"; else fatal "tray order or placement is wrong"; fi
 
-tap '+1 more' || fatal "cannot expand overflow"
+tap '+2 more' || fatal "cannot expand overflow"
 wait_text "$THIRD" || fatal "overflow sheet does not show the third schedule"
 ui_query has "$FIRST" && ui_query has "$SECOND" && pass "overflow sheet exposes all three schedules" || fatal "overflow sheet omits schedules"
 ui_query has "$CONTROL" && fatal "overflow sheet exposes another conversation"
@@ -253,8 +254,9 @@ assert_db "sent schedule is consumed" "SELECT COUNT(*) FROM scheduled_messages W
 assert_db "message is persisted once in its own conversation" "SELECT COUNT(*) FROM messages WHERE body='$FIRST' AND conversation_id=$CONV AND is_me=1;" 1 || finish
 sleep 2
 assert_db "send-now does not duplicate the message" "SELECT COUNT(*) FROM messages WHERE body='$FIRST';" 1 || finish
-wait_text "$THIRD" || fatal "third schedule does not fill the freed tray slot"
-ui_query has '+1 more' && fatal "overflow remains after only two schedules are left"
+wait_text "$SECOND" || fatal "next schedule does not fill the freed tray slot"
+ui_query has '+1 more' && pass "overflow updates after sending the first schedule" || fatal "overflow count did not update"
+ui_query has "$THIRD" && fatal "second remaining schedule appears outside overflow"
 
 info "Cancel removes only the selected schedule"
 manage "$SECOND" || fatal "second schedule cannot be managed"
@@ -264,5 +266,6 @@ assert_db "cancel does not send the canceled text" "SELECT COUNT(*) FROM message
 assert_db "rescheduled row and other conversation survive" "SELECT COUNT(*) FROM scheduled_messages WHERE body IN ('$THIRD','$CONTROL');" 2 || finish
 wait_text "$THIRD" || fatal "remaining schedule disappeared"
 ui_query has "$SECOND" && fatal "canceled text still appears in the tray"
+ui_query has '+1 more' && fatal "overflow remains with only one schedule"
 [ "$(ui_query count 'Manage scheduled messages')" = "1" ] && pass "tray shrinks to its remaining schedule" || fatal "tray did not shrink after cancellation"
 finish

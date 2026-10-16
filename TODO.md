@@ -2253,3 +2253,8 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] Light/dark and 1.3x font captures reviewed; no material design fixes.
 - [x] Clean debug and signed release APK build gate and verification passed.
 - [x] Published release 1.0.30-camille.1-34; server integrity, public sizes/hashes, versioned/latest URLs, and download filenames verified.
+### Compact scheduled-message tray
+
+- [x] One scheduled message with inline +N overflow; hidden messages remain accessible in the queue sheet.
+- [x] ScheduledTrayTest updated for one visible slot and promotion after removal; 885 app JVM tests passed.
+- [x] test-scheduled-tray.sh asserts one visible row and inline overflow; failed on the previous two-row APK and passed all 18 checks on the compact build.
