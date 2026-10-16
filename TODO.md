@@ -2230,3 +2230,9 @@ subscription, invalidated on resume so a SIM swap is picked up.
   dimensions. The assertion has to come from what the composer actually wrote,
   which is why `MmsComposer` logs the source -> encoded dimension transition.
 
+
+### Conversation scheduled-message tray
+
+- [x] Two visible schedules, chronological overflow, reschedule, send-now, cancellation, and conversation isolation.
+- [x] ScheduledTrayTest and ScheduledDeliveryWiringTest; app JVM suite: 885 tests passed.
+- [x] test-scheduled-tray.sh: 17 checks passed; baseline failed the collapsed-tray assertion.
