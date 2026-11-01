@@ -1,5 +1,12 @@
 # TODO
 
+## Shared updater installation handoff (2026-11-01)
+
+- [x] Adopt updater 1.0.5: verified downloads and granted install permission proceed directly to Android confirmation.
+- [x] AppUpdatesTest and test-app-updates.sh pass on Android 37 with version 1.0.30-camille.4 (37).
+- [x] Clean debug/release APK build and freshness verification pass.
+- [ ] Existing LegacySettingsIndexTest failure: the update row is absent from the search index; reproduced against unchanged HEAD source.
+
 ## Send-button countdown (2026-10-16)
 
 - [x] Countdown and cancel action beside the composer; no top banner.
