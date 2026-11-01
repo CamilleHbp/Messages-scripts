@@ -30,6 +30,7 @@
     "local.properties",
     "gradle/**",
     "gradlew",
-    "gradlew.bat"
+    "gradlew.bat",
+    "app/libs/**"
   ]
 }
