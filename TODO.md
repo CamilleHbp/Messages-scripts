@@ -2273,3 +2273,14 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] Light/dark 1.3x text captures reviewed; before/after and combined countdown comparisons refreshed.
 - [x] Clean debug and signed release builds verified after final Android changes.
 - [x] Published 1.0.30-camille.2-35; server catalogue, public artifact sizes/SHA-256, versioned/latest URLs, and download filenames verified.
+
+### Inbox search and scheduled SMS
+
+- [x] Match group titles and contact names with or without Latin accents, prioritize name matches, and show clear and empty states in both inbox layouts.
+- [x] Include the personal update control in legacy settings search.
+- [x] Expose scheduling in the composer, validate the local send time, preserve the selected SIM, and restore pending alarms after app launch, update, or reboot.
+- [x] Use one-shot idle-friendly SMS alarms with a bounded receiver wake lock and a fallback when exact alarms are unavailable.
+- [x] Verified 1,213 JVM tests and signed debug and release APKs for 1.0.30-camille.5 (38).
+- [x] Android 15 emulator regressions reproduced missing group results and settings search on the prior release, then passed for both inbox layouts and the update setting.
+- [x] Recovered messages fired after relaunch. Two composer messages survived app replacement and reached Android’s Sent box during deep Doze, with their outgoing rows recorded 84 ms and 124 ms after the selected times.
+- [x] Confirmed Android acknowledged a pending SMS after emulator reboot and unlock without reopening Messages.
