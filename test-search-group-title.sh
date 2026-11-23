@@ -14,6 +14,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
+adb_ shell am force-stop "$PKG"
 adb_ shell am start -n "$ACT" >/dev/null
 wait_for_text "Search" 5 || { bad "inbox did not open"; exit 1; }
 adb_ shell am force-stop "$PKG"
