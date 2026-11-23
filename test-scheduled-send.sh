@@ -1,66 +1,47 @@
 #!/usr/bin/env bash
-# Issue #81 regression: scheduled send must persist the composed text as a
-# normal message row (never lose it), always consume the schedule entry, and
-# surface hand-off failures as a retriable "failed" message.
-#
-# Drives ScheduledMessageSender directly via an explicit broadcast — the same
-# shape AlarmManager delivers — then asserts the message landed in the chat
-# and (when the emulator radio completes it) the system Sent box.
-#
-# Run: scripts/test-scheduled-send.sh
-set -uo pipefail
-cd "$(dirname "$0")"
-source ./env.sh
+set -eu -o pipefail
+source "$(dirname "$0")/env.sh"
 
-NUM=15551230088
-BODY="sched81 probe $(date +%s)"
+fail() { echo "[FAIL] $*"; exit 1; }
+pass() { echo "[PASS] $*"; }
+[ "$(adb_ shell getprop ro.kernel.qemu | tr -d '\r')" = 1 ] || fail "Android emulator required"
+SQLITE=${SQLITE:-sqlite3}
+case "$PKG$SQLITE" in *[!a-zA-Z0-9_/.-]*) fail "invalid SQLite path or package";; esac
+db() { printf '.timeout 5000\n%s\n' "$1" | adb_ shell "run-as $PKG $SQLITE databases/messages.db" | tr -d '\r'; }
 
-fail() { echo "FAIL: $*"; exit 1; }
-pass() { echo "PASS: $*"; }
-adb_ logcat -b crash -c >/dev/null 2>&1 || true
-
-info "Broadcast scheduled-send intent (id=424242, sub=-1)"
-# ScheduledMessageSender is exported="false", so plain-shell broadcasts are
-# silently dropped; adbd must run as root (emulator-only dev shortcut) and the
-# body needs device-side quoting because adb concatenates raw args.
-adb_ root >/dev/null 2>&1 || true
-sleep 3
-adb_ shell "am broadcast -n $PKG/.sms.ScheduledMessageSender \
-    --es scheduled_address $NUM \
-    --es scheduled_body '$BODY' \
-    --el scheduled_id 424242 \
-    --ei scheduled_sub_id -1" >/dev/null
-sleep 10   # radio hand-off + sent-status callback
-adb_ unroot >/dev/null 2>&1 || true
-sleep 3
-
-info "Open the conversation and assert the message rendered"
-bash ./grant-permissions.sh >/dev/null 2>&1 || true
-adb_ shell am force-stop "$PKG"; sleep 1
-adb_ shell am start -n "$ACT" >/dev/null; sleep 5
-
-# home shows formatted numbers ("+1-555-123-0088") — match on a formatted
-# fragment; use in-app search if the row isn't immediately visible
-dump_ui || fail "home dump failed"
-C=$(center_of_contains "123-0088" || center_of_contains "5551230088" || true)
-if [ -z "$C" ]; then
-    tap_text "Search" || adb_ shell input tap 990 150
+# Use the emulator SMS destination and a unique row. Simulate the state left
+# by a reboot: the database still has the schedule, but AlarmManager does not.
+BODY="schedule-recovery-$(date +%s)-$$"
+NUM=5556
+CONV=""
+CREATED=""
+cleanup() {
+    db "DELETE FROM scheduled_messages WHERE body='$BODY'; DELETE FROM messages WHERE body='$BODY';" >/dev/null || true
+    if [ -n "$CREATED" ]; then
+        db "DELETE FROM conversations WHERE id=$CONV AND NOT EXISTS (SELECT 1 FROM messages WHERE conversation_id=$CONV) AND NOT EXISTS (SELECT 1 FROM scheduled_messages WHERE conversation_id=$CONV);" >/dev/null || true
+    fi
+    adb_ shell "content delete --uri content://sms --where \"body='$BODY'\"" >/dev/null || true
+}
+[ "$(db 'SELECT 1;')" = 1 ] || fail "SQLite unavailable; set SQLITE to the device executable path"
+adb_ shell am force-stop "$PKG"
+NOW=$(adb_ shell date +%s | tr -d '\r')
+# Allocate an isolated conversation. Never change an existing thread.
+CONV=$(db "SELECT id FROM conversations WHERE address='$NUM' LIMIT 1;")
+[ -z "$CONV" ] || fail "emulator test destination $NUM already has a conversation"
+CONV=$(db "INSERT INTO conversations(address,name,snippet,timestamp) VALUES('$NUM','$BODY','',$((NOW * 1000))); SELECT last_insert_rowid();")
+[[ "$CONV" =~ ^[0-9]+$ ]] || fail "conversation setup failed"
+CREATED=1
+trap cleanup EXIT
+DUE=$(( (NOW + 15) * 1000 ))
+db "INSERT INTO scheduled_messages(address,body,timestamp,conversation_id,sub_id) VALUES('$NUM','$BODY',$DUE,$CONV,-1);"
+adb_ shell am start -n "$ACT" --es open_conversation_address "$NUM" >/dev/null
+for _ in {1..45}; do
+    COUNT=$(db "SELECT COUNT(*) FROM messages WHERE body='$BODY' AND conversation_id=$CONV AND is_me=1 AND timestamp >= $DUE;")
+    [ "$COUNT" = 1 ] && break
     sleep 1
-    type_text "1230088"; sleep 2
-    C=$(center_of_contains "123-0088" || center_of_contains "5551230088") || fail "conversation $NUM not found via search"
-fi
-adb_ shell input tap $C; sleep 3
-dump_ui || fail "chat dump failed"
-grep -qF "\"$BODY\"" "$TMP/ui.xml" || fail "'$BODY' not rendered in chat — scheduled text was lost"
-
-info "Assert system Sent box received it"
-SENT=$(adb_ shell content query --uri content://sms/sent --projection body \
-    --where "\"body LIKE '%${BODY:0:16}'\"" 2>/dev/null | grep -cF "${BODY:0:16}" || true)
-[ "${SENT:-0}" -ge 1 ] && echo "[info] mirrored to system Sent box"
-
-CRASHES=$(adb_ logcat -d -b crash 2>/dev/null | grep -c "$PKG" || true)
-[ "${CRASHES:-0}" -eq 0 ] || fail "crash buffer contains $PKG entries"
-
-shot "scheduled-send"
-adb_ shell input keyevent KEYCODE_BACK >/dev/null 2>&1 || true
-pass "scheduled text persisted as message + sent without ghosts (#81)"
+done
+[ "$COUNT" = 1 ] || fail "persisted schedule did not fire at or after its due time"
+[ "$(db "SELECT COUNT(*) FROM scheduled_messages WHERE body='$BODY';")" = 0 ] || fail "delivered schedule remains queued"
+pass "real AlarmManager delivery after reopening the app consumed the schedule once"
+wait_for_text "$BODY" 4 || fail "delivered text missing from the conversation"
+pass "scheduled text appears in its original conversation"
