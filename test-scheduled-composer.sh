@@ -14,9 +14,12 @@ case "$PKG$SQLITE" in *[!a-zA-Z0-9_/.-]*) fail "invalid package name or SQLite p
 db() { printf '.timeout 5000\n%s\n' "$1" | adb_ shell "run-as $PKG $SQLITE databases/messages.db" | tr -d '\r'; }
 [ "$(db "SELECT count(*) FROM conversations WHERE address='$NUM';")" = 0 ] || fail "loopback number already has a conversation; use a clean test emulator"
 ORIGINAL_PARTICIPANTS=$(db "SELECT count(*) FROM participants WHERE normalized_destination='$NUM';")
+WRITE_SMS_MODE=$(adb_ shell cmd appops get com.android.shell WRITE_SMS | sed -nE 's/^WRITE_SMS: ([a-z_]+).*/\1/p')
 cleanup() {
     adb_ shell am force-stop "$PKG" >/dev/null || true
+    adb_ shell cmd appops set com.android.shell WRITE_SMS allow
     adb_ shell "content delete --uri content://sms --where \"body IN ('$MARK-clock','$MARK-longpress')\"" >/dev/null || true
+    adb_ shell cmd appops set com.android.shell WRITE_SMS "${WRITE_SMS_MODE:-default}"
     db "PRAGMA foreign_keys=ON; BEGIN; DELETE FROM scheduled_messages WHERE body IN ('$MARK-clock','$MARK-longpress'); DELETE FROM messages WHERE body IN ('$MARK-clock','$MARK-longpress');
         DELETE FROM conversations WHERE address='$NUM' AND NOT EXISTS (SELECT 1 FROM messages WHERE conversation_id=conversations.id) AND NOT EXISTS (SELECT 1 FROM scheduled_messages WHERE conversation_id=conversations.id);
         DELETE FROM participants WHERE normalized_destination='$NUM' AND $ORIGINAL_PARTICIPANTS=0 AND NOT EXISTS (SELECT 1 FROM conversation_recipients WHERE address='$NUM'); COMMIT;" >/dev/null || true
