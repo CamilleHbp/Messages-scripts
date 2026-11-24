@@ -18,13 +18,6 @@ adb_ shell "content insert --uri content://com.android.contacts/data --bind raw_
 open_picker() {
     adb_ shell am force-stop "$PKG"
     adb_ shell am start -n "$ACT" >/dev/null
-    if [[ ${1:-} == denied ]]; then
-        for ((i=0; i<5; i++)); do
-            dump_ui || continue
-            if grep -q 'text="DON’T ALLOW"' "$TMP/ui.xml"; then tap_text 'DON’T ALLOW'; break; fi
-            grep -q 'Start chat' "$TMP/ui.xml" && break
-        done
-    fi
     wait_for_text 'Start chat'
     tap_text 'Start chat'
     wait_for_text 'Enter name or phone number'
@@ -37,21 +30,30 @@ for query in "Jose$id" 415555; do
 done
 adb_ shell pm revoke "$PKG" "$permission"
 adb_ shell pm clear-permission-flags "$PKG" "$permission" user-set user-fixed
-open_picker denied
-wait_for_text 'Allow contacts access'
+open_picker
 type_text "Jose$id"
+wait_for_text 'Allow contacts access'
 tap_text 'Allow contacts access to search by name'
 wait_for_text 'ALLOW'
 tap_text 'ALLOW'
 wait_for_text "$name" || { echo '[FAIL] contact query lost or matches did not refresh'; exit 1; }
 adb_ shell pm revoke "$PKG" "$permission"
-adb_ shell pm set-permission-flags "$PKG" "$permission" user-set user-fixed
-open_picker denied
-wait_for_text 'Open app settings'
+adb_ shell pm clear-permission-flags "$PKG" "$permission" user-set user-fixed
+open_picker
 type_text 5550134
 wait_for_text 'Send to'
+dump_ui
+! grep -q 'Open app settings' "$TMP/ui.xml" || exit 1
+open_picker
+type_text "Jose$id"
+for denial in 1 2; do
+    tap_text 'Allow contacts access to search by name'
+    wait_for_text 'DON’T ALLOW'
+    tap_text 'DON’T ALLOW'
+done
+wait_for_text 'Open app settings'
 tap_text 'Open app settings'
 wait_for_text 'App info'
 adb_ shell input keyevent 4
-wait_for_text '5550134'
+wait_for_text "Jose$id"
 echo '[PASS] Accents, formatted numbers, and manual entry without Contacts access'

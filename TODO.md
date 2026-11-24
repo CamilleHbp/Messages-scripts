@@ -2292,3 +2292,7 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] Restore ordered photo drafts and captions after navigation, rotation, and process death. Give each removal control a positional label and a 48 dp target.
 - [x] Resume unexpired send delays. Retain interrupted text, photos, and SIM selection for explicit confirmation after expiry while closed.
 - [x] Request Contacts access from recipient search when Android can prompt. Guide users to app settings after permanent denial and keep their query.
+
+- [x] Recover fresh text drafts after rotation and process death, and show the count and caption of staged photos in both inbox layouts.
+- [x] Show the recipient, content, photo count and SIM during interrupted-send review, with explicit Send now and Keep as draft actions.
+- [x] Offer Contacts access during recipient name searches and keep direct number entry available.
