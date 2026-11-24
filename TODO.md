@@ -2238,3 +2238,4 @@ subscription, invalidated on resume so a SIM swap is picked up.
   which is why `MmsComposer` logs the source -> encoded dimension transition.
 
 - [x] Verify the visible Cancel and remaining seconds alongside the draft at enlarged font sizes.
+- [x] Verify the shared General settings delay, inbox countdowns and cancellation or dispatch of text and pictures across navigation.

@@ -163,6 +163,9 @@ else
     fail 'countdown must be inside send control'
     exit 1
 fi
+tap_retry Back
+wait_for_text 'Sending in ' 3 || { fail 'inbox lost pending countdown'; exit 1; }
+tap_contains 'Countdown test'
 tap_retry Cancel
 sleep 1
 dump_ui_retry
@@ -191,8 +194,10 @@ set_delay 3
 db "UPDATE conversations SET draft='$TOKEN auto' WHERE id=$CONV;" >/dev/null
 open_chat "$TOKEN auto"
 tap_retry Send
+adb_ shell input keyevent 4
 sleep 5
 if [ "$(db "SELECT COUNT(*) FROM messages WHERE body='$TOKEN auto';")" = 1 ]; then pass 'expiry sends exactly once'; else fail 'expiry must persist one outgoing message'; fi
+adb_ shell am start -n "$ACT" -a android.intent.action.SENDTO -d "smsto:$NUM" >/dev/null
 dump_ui_retry
 if python3 - "$TMP/ui.xml" <<'PY'
 import sys, xml.etree.ElementTree as E
