@@ -2288,3 +2288,7 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] Label the delayed-send cancel action with the remaining seconds and allow the control to grow with text size.
 - [x] Verify accent-insensitive recipient names, formatted numbers and manual entry without Contacts access.
 - [x] Verify the shared General settings delay, inbox countdowns and cancellation or dispatch of text and pictures across navigation.
+
+- [x] Restore ordered photo drafts and captions after navigation, rotation, and process death. Give each removal control a positional label and a 48 dp target.
+- [x] Resume unexpired send delays. Retain interrupted text, photos, and SIM selection for explicit confirmation after expiry while closed.
+- [x] Request Contacts access from recipient search when Android can prompt. Guide users to app settings after permanent denial and keep their query.

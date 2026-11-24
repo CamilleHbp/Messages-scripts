@@ -34,7 +34,7 @@ id=$(db "INSERT INTO conversations(address,name,snippet,timestamp) VALUES ('$num
 [[ "$id" =~ ^[0-9]+$ ]]
 count_images() { db "SELECT count(*) FROM messages WHERE conversation_id=$id AND media_type='image' AND is_me=1;"; }
 adb_ shell am start -n "$ACT" -a android.intent.action.SEND -d "smsto:$number" -t image/png --eu android.intent.extra.STREAM "$uri" --es sms_body "$token" --grant-read-uri-permission >/dev/null
-wait_for_text 'content-desc="Close"' || { echo '[FAIL] shared image did not reach composer'; exit 1; }
+wait_for_text 'content-desc="Remove photo 1 of 1"' || { echo '[FAIL] shared image did not reach composer'; exit 1; }
 [[ "$(count_images)" == 0 ]]
 tap_text Send
 wait_for_text 'content-desc="Cancel"'
@@ -42,7 +42,7 @@ tap_text Back
 wait_for_text 'Sending in '
 tap_contains "$token"
 tap_text Cancel
-wait_for_text 'content-desc="Close"'
+wait_for_text 'content-desc="Remove photo 1 of 1"'
 wait_for_text "$token"
 [[ "$(count_images)" == 0 ]] || { echo '[FAIL] canceled picture was sent'; exit 1; }
 tap_text Send

@@ -7,6 +7,7 @@ permission=android.permission.READ_CONTACTS
 prior=$(adb_ shell dumpsys package "$PKG" | grep -m1 "$permission: granted=" || true)
 cleanup() {
     adb_ shell content delete --uri "content://com.android.contacts/raw_contacts/$id" >/dev/null
+    adb_ shell pm clear-permission-flags "$PKG" "$permission" user-set user-fixed
     if [[ "$prior" == *granted=true* ]]; then adb_ shell pm grant "$PKG" "$permission"; else adb_ shell pm revoke "$PKG" "$permission"; fi
     adb_ shell am force-stop "$PKG"
 }
@@ -35,8 +36,22 @@ for query in "Jose$id" 415555; do
     wait_for_text "$name" || { echo "[FAIL] missing contact for $query"; exit 1; }
 done
 adb_ shell pm revoke "$PKG" "$permission"
+adb_ shell pm clear-permission-flags "$PKG" "$permission" user-set user-fixed
 open_picker denied
 wait_for_text 'Allow contacts access'
+type_text "Jose$id"
+tap_text 'Allow contacts access to search by name'
+wait_for_text 'ALLOW'
+tap_text 'ALLOW'
+wait_for_text "$name" || { echo '[FAIL] contact query lost or matches did not refresh'; exit 1; }
+adb_ shell pm revoke "$PKG" "$permission"
+adb_ shell pm set-permission-flags "$PKG" "$permission" user-set user-fixed
+open_picker denied
+wait_for_text 'Open app settings'
 type_text 5550134
 wait_for_text 'Send to'
+tap_text 'Open app settings'
+wait_for_text 'App info'
+adb_ shell input keyevent 4
+wait_for_text '5550134'
 echo '[PASS] Accents, formatted numbers, and manual entry without Contacts access'
