@@ -193,7 +193,7 @@ fi
 # The agreed row order, with exactly the rows that have no description.
 info "General settings: agreed row order and description set"
 dump_ui >/dev/null 2>&1 || true
-EXPECTED_ORDER="Notifications|Choose theme|SIM card|Inbox settings|Privacy mode|App lock|Trash|Spam &amp; Blocked|Backup messages|Import messages|Advanced settings"
+EXPECTED_ORDER="Notifications|Send delay|Choose theme|SIM card|Inbox settings|Privacy mode|App lock|Trash|Spam &amp; Blocked|Backup messages|Import messages|Advanced settings"
 # The page scrolls, so walk it and accumulate row titles in order rather than
 # reading one screen's worth.
 : > "$TMP/order.txt"

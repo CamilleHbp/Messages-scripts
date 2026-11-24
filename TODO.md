@@ -2286,3 +2286,5 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] Confirmed Android acknowledged a pending SMS after emulator reboot and unlock without reopening Messages.
 - [x] Show contact matches, meaningful empty inbox and archive states, a named Settings gear, and counted confirmation for marking inbox conversations read.
 - [x] Label the delayed-send cancel action with the remaining seconds and allow the control to grow with text size.
+- [x] Verify accent-insensitive recipient names, formatted numbers and manual entry without Contacts access.
+- [x] Verify the shared General settings delay, inbox countdowns and cancellation or dispatch of text and pictures across navigation.
