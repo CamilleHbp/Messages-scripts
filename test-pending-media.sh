@@ -214,7 +214,7 @@ if [ "$(outgoing_images)" = "0" ]; then
 else
     bad "pictures were sent the moment they were picked (#326 regressed)"
 fi
-STAGED=$(layout_count "Close")
+STAGED=$(layout_count_prefix "Remove photo ")
 if [ "$STAGED" = "2" ]; then
     ok "both pictures are staged as removable thumbnails"
 else

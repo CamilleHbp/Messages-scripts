@@ -154,7 +154,7 @@ assert not any(n.get('text','').startswith('Sending in ') for n in nodes), 'top 
 PY
 }
 
-db "UPDATE conversations SET draft='$TOKEN cancel' WHERE id=$CONV;" >/dev/null
+db "UPDATE conversations SET composer='',draft='$TOKEN cancel' WHERE id=$CONV;" >/dev/null
 open_chat "$TOKEN cancel"
 tap_retry Send
 if assert_countdown_in_composer; then
@@ -191,7 +191,7 @@ sleep 31
 if [ "$(db "SELECT COUNT(*) FROM messages WHERE conversation_id=$CONV AND is_me=1;")" = 0 ]; then pass 'cancelled countdown never sends later'; else fail 'cancelled countdown sent after deadline'; fi
 
 set_delay 3
-db "UPDATE conversations SET draft='$TOKEN auto' WHERE id=$CONV;" >/dev/null
+db "UPDATE conversations SET composer='',draft='$TOKEN auto' WHERE id=$CONV;" >/dev/null
 open_chat "$TOKEN auto"
 tap_retry Send
 adb_ shell input keyevent 4
@@ -208,7 +208,7 @@ then pass 'expiry clears only the sent draft'; else fail 'sent draft not cleared
 sleep 3
 if [ "$(db "SELECT COUNT(*) FROM messages WHERE body='$TOKEN auto';")" = 1 ]; then pass 'expiry cannot send twice'; else fail 'duplicate send after expiry'; fi
 set_delay 30
-db "UPDATE conversations SET draft='$TOKEN restored' WHERE id=$CONV;" >/dev/null
+db "UPDATE conversations SET composer='',draft='$TOKEN restored' WHERE id=$CONV;" >/dev/null
 if open_chat "$TOKEN restored" --saved; then pass 'reopening restores the saved draft'; else fail 'saved draft was not restored'; fi
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 exit $((FAIL > 0))
