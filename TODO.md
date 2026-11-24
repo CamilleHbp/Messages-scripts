@@ -2284,3 +2284,5 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] Android 15 emulator regressions reproduced missing group results and settings search on the prior release, then passed for both inbox layouts and the update setting.
 - [x] Recovered messages fired after relaunch. Two composer messages survived app replacement and reached Android’s Sent box during deep Doze, with their outgoing rows recorded 84 ms and 124 ms after the selected times.
 - [x] Confirmed Android acknowledged a pending SMS after emulator reboot and unlock without reopening Messages.
+- [x] Show contact matches, meaningful empty inbox and archive states, a named Settings gear, and counted confirmation for marking inbox conversations read.
+- [x] Label the delayed-send cancel action with the remaining seconds and allow the control to grow with text size.

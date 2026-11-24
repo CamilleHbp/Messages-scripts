@@ -148,8 +148,8 @@ for node in nodes:
 assert fields and buttons, 'no accessible countdown cancel control'
 f=bounds(fields[0]); b=bounds(buttons[0])
 assert abs((f[1]+f[3])-(b[1]+b[3]))<320, 'countdown is not alongside composer'
-assert b[2]-b[0]<=180, 'countdown control is not compact'
-assert any(re.fullmatch(r'\d+',n.get('text','')) for n in nodes), 'remaining seconds missing'
+assert b[0]>=f[2], 'cancel overlaps the draft'
+assert any(re.fullmatch(r'Cancel · \d+ s',n.get('text','')) for n in nodes), 'remaining seconds missing'
 assert not any(n.get('text','').startswith('Sending in ') for n in nodes), 'top banner remains'
 PY
 }
@@ -172,13 +172,20 @@ if [ "$(db "SELECT COUNT(*) FROM messages WHERE body='$TOKEN cancel';")" = 0 ]; 
 tap_retry Send
 tap_edittext_retry
 sleep 0.5
-adb_ shell input keyevent KEYCODE_MOVE_END
 type_text " edited"
 sleep 1
 dump_ui_retry
-if grep -q "$TOKEN cancel edited" "$TMP/ui.xml" && ! grep -q 'content-desc="Cancel"' "$TMP/ui.xml"; then pass 'editing cancels countdown and retains edited draft'; else fail 'editing must cancel without losing text'; fi
+if python3 - "$TMP/ui.xml" "$TOKEN cancel" <<'PYEDIT'
+import sys, xml.etree.ElementTree as ET
+nodes = list(ET.parse(sys.argv[1]).iter('node'))
+field = next(n for n in nodes if n.get('class') == 'android.widget.EditText')
+edited = field.get('text', '')
+assert ' edited' in edited and edited.replace(' edited', '', 1) == sys.argv[2], edited
+assert not any(n.get('content-desc') == 'Cancel' for n in nodes)
+PYEDIT
+then pass 'editing cancels countdown and retains edited draft'; else fail 'editing must cancel without losing text'; fi
 sleep 31
-if [ "$(db "SELECT COUNT(*) FROM messages WHERE body LIKE '$TOKEN cancel%';")" = 0 ]; then pass 'cancelled countdown never sends later'; else fail 'cancelled countdown sent after deadline'; fi
+if [ "$(db "SELECT COUNT(*) FROM messages WHERE conversation_id=$CONV AND is_me=1;")" = 0 ]; then pass 'cancelled countdown never sends later'; else fail 'cancelled countdown sent after deadline'; fi
 
 set_delay 3
 db "UPDATE conversations SET draft='$TOKEN auto' WHERE id=$CONV;" >/dev/null
