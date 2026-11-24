@@ -2231,3 +2231,4 @@ subscription, invalidated on resume so a SIM swap is picked up.
   which is why `MmsComposer` logs the source -> encoded dimension transition.
 
 - [x] Cover empty inbox and archive, settings accessibility, recipient search, and counted mark-as-read confirmation.
+- [x] Verify accent-insensitive recipient names, formatted numbers and manual entry without Contacts access.
