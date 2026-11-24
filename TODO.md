@@ -2303,3 +2303,6 @@ subscription, invalidated on resume so a SIM swap is picked up.
 
 - [x] Show per-recipient group SMS results and retry failed recipients directly from the message bubble.
 - [x] Expand group recipients during interrupted-send review. Keep Send now disabled until missing photos and a confirmed inactive SIM are resolved.
+
+- [x] Present failed group recipients first, show known radio and service errors, and exclude blocked recipients from retry.
+- [x] Keep outstanding photo repairs and SIM selection beside send confirmation, with a remaining count and positional accessibility labels.
