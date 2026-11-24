@@ -2230,3 +2230,4 @@ subscription, invalidated on resume so a SIM swap is picked up.
   dimensions. The assertion has to come from what the composer actually wrote,
   which is why `MmsComposer` logs the source -> encoded dimension transition.
 
+- [x] Cover empty inbox and archive, settings accessibility, recipient search, and counted mark-as-read confirmation.

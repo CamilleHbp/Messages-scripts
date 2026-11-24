@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Tests: swipe sensitivity, swipe-delete -> trash + Undo snackbar,
-# long-press Delete -> trash, Settings -> Trash (restore), and the
-# "Mark all as read" setting.
+# long-press Delete -> trash, Settings -> Trash (restore).
 source "$(dirname "$0")/env.sh"
 
 FAIL=0
@@ -92,18 +91,16 @@ dump_ui && ! grep -q "123-0999" "$TMP/ui.xml" \
     && pass "sheet delete moved row to trash" \
     || fail "sheet delete failed"
 
-info "5. Settings shows Trash + Mark all as read; restore works"
+info "5. Settings shows Trash; restore works"
 adb_ shell am force-stop "$PKG"; sleep 1
 adb_ shell am start -n "$ACT" --ez open_settings true >/dev/null; sleep 3
-FOUND_TRASH=0; FOUND_MARK=0
+FOUND_TRASH=0
 for i in 1 2 3 4 5; do
     dump_ui
     grep -q '"Trash"' "$TMP/ui.xml" && FOUND_TRASH=1
-    grep -q "Mark all as read" "$TMP/ui.xml" && FOUND_MARK=1
-    [ "$FOUND_TRASH" = "1" ] && [ "$FOUND_MARK" = "1" ] && break
+    [ "$FOUND_TRASH" = "1" ] && break
     adb_ shell input swipe 540 1800 540 700 300; sleep 1.2
 done
-[ "$FOUND_MARK" = "1" ] && pass "'Mark all as read' present" || fail "'Mark all as read' missing"
 if [ "$FOUND_TRASH" = "1" ]; then
     pass "'Trash' entry present"
     tap_text "Trash"; sleep 2
