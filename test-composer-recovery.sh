@@ -56,7 +56,11 @@ tap_text 'Remove photo 2 of 2'
 wait_for_text 'content-desc="Photo 1 of 1"'
 wait_for_text "$token"
 tap_text Back
-wait_for_text "Draft: Photo"
+wait_for_text "1 photo · $token"
+adb_ shell am force-stop "$PKG"
+adb_ shell "run-as $PKG sed -i 's|</map>|<boolean name=\"use_new_ui\" value=\"true\"/></map>|' $prefs"
+adb_ shell am start -n "$ACT" >/dev/null
+wait_for_text "1 photo · $token"
 adb_ shell am force-stop "$PKG"
 open_thread() {
     adb_ shell am start -n "$ACT" -a android.intent.action.SENDTO -d "smsto:$number" >/dev/null
@@ -79,11 +83,18 @@ sleep 31
 open_thread
 wait_for_text 'Review your message before sending'
 [[ "$(count_images)" == 0 ]]
-tap_text Send
-wait_for_text 'Send interrupted'
-tap_text Cancel
+tap_text 'Review message'
+wait_for_text "To $token"
+wait_for_text "text=\"$token\""
+wait_for_text '1 photo'
+tap_text 'Keep as draft'
 [[ "$(count_images)" == 0 ]]
+[[ "$(db "SELECT json_extract(composer,'$.state') FROM conversations WHERE id=$id;")" == DRAFT ]]
 tap_text Send
+adb_ shell am force-stop "$PKG"
+db "UPDATE conversations SET composer=json_set(composer,'$.deadline',0) WHERE id=$id;" >/dev/null
+open_thread
+tap_text 'Review message'
 tap_text 'Send now'
 [[ "$(count_images)" == 1 ]] || { echo '[FAIL] explicit confirmation did not create exactly one message'; exit 1; }
 [[ "$(db "SELECT body FROM messages WHERE conversation_id=$id AND media_type='image';")" == "$token" ]]
