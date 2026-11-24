@@ -33,7 +33,7 @@ adb_ shell content insert --uri content://media/external/images/media --bind "_d
 media_id=$(adb_ shell "content query --uri content://media/external/images/media --projection _id --where \"_display_name='$token.png'\"" | sed -nE 's/.*_id=([0-9]+).*/\1/p' | tr -d '\r')
 [[ "$media_id" =~ ^[0-9]+$ ]]
 uri="content://media/external/images/media/$media_id"
-python3 -c 'import base64,sys;sys.stdout.buffer.write(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a8V8AAAAASUVORK5CYII="))' | adb_ shell -T content write --uri "$uri"
+python3 -c 'import struct,zlib,sys; chunk=lambda t,d:struct.pack(">I",len(d))+t+d+struct.pack(">I",zlib.crc32(t+d)); sys.stdout.buffer.write(bytes.fromhex("89504e470d0a1a0a")+chunk(b"IHDR",struct.pack(">IIBBBBB",1,1,8,2,0,0,0))+chunk(b"IDAT",zlib.compress(bytes([0,64,128,192])))+chunk(b"IEND",b""))' | adb_ shell -T content write --uri "$uri"
 id=$(db "INSERT INTO conversations(address,name,snippet,timestamp) VALUES ('$number','$token','attachment',1000); SELECT last_insert_rowid();" | tail -1)
 [[ "$id" =~ ^[0-9]+$ ]]
 count_images() { db "SELECT count(*) FROM messages WHERE conversation_id=$id AND media_type='image' AND is_me=1;"; }

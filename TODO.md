@@ -2300,3 +2300,6 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] Preserve photo captions and the sending SIM on retry, and offer a separate 48 dp SIM chooser beside the failed bubble.
 - [x] Enlarge inline photos from interrupted-send review and return to the same review without sending.
 - [x] Apply the draft-preview preference to text and photo captions in both inbox layouts.
+
+- [x] Show per-recipient group SMS results and retry failed recipients directly from the message bubble.
+- [x] Expand group recipients during interrupted-send review. Keep Send now disabled until missing photos and a confirmed inactive SIM are resolved.
