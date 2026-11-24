@@ -32,6 +32,8 @@ assert n.get('enabled')==sys.argv[2], n.attrib
 PY
 }
 enabled false
+wait_for_text 'Unavailable photos: 2' 2 || { echo '[FAIL] review does not expose the outstanding repair count'; exit 1; }
+wait_for_text 'content-desc="Replace · Photo 1 of 2"'
 tap_text '2 recipients'
 wait_for_text '0102'
 tap_text '2 recipients'
@@ -40,12 +42,13 @@ adb_ shell content insert --uri content://media/external/images/media --bind "_d
 media_id=$(adb_ shell "content query --uri content://media/external/images/media --projection _id --where \"_display_name='repair-$id.png'\"" | sed -nE 's/.*_id=([0-9]+).*/\1/p' | tr -d '\r')
 uri="content://media/external/images/media/$media_id"
 python3 -c 'import struct,zlib,sys; chunk=lambda t,d:struct.pack(">I",len(d))+t+d+struct.pack(">I",zlib.crc32(t+d)); sys.stdout.buffer.write(bytes.fromhex("89504e470d0a1a0a")+chunk(b"IHDR",struct.pack(">IIBBBBB",1,1,8,2,0,0,0))+chunk(b"IDAT",zlib.compress(bytes([0,64,128,192])))+chunk(b"IEND",b""))' | adb_ shell -T content write --uri "$uri"
-tap_text Replace
+tap_text 'Replace · Photo 1 of 2'
 wait_for_text 'Photo taken'
 tap_contains 'Photo taken'
 wait_for_text 'content-desc="Photo 1 of 2"'
 enabled false
-tap_text Remove
+wait_for_text 'content-desc="Remove · Photo 2 of 2"'
+tap_text 'Remove · Photo 2 of 2'
 wait_for_text 'content-desc="Photo 1 of 1"'
 enabled false
 tap_text 'Choose SIM'
