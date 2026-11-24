@@ -2237,3 +2237,4 @@ subscription, invalidated on resume so a SIM swap is picked up.
   dimensions. The assertion has to come from what the composer actually wrote,
   which is why `MmsComposer` logs the source -> encoded dimension transition.
 
+- [x] Verify the visible Cancel and remaining seconds alongside the draft at enlarged font sizes.

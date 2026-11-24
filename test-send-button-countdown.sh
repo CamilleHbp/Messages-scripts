@@ -148,8 +148,8 @@ for node in nodes:
 assert fields and buttons, 'no accessible countdown cancel control'
 f=bounds(fields[0]); b=bounds(buttons[0])
 assert abs((f[1]+f[3])-(b[1]+b[3]))<320, 'countdown is not alongside composer'
-assert b[2]-b[0]<=180, 'countdown control is not compact'
-assert any(re.fullmatch(r'\d+',n.get('text','')) for n in nodes), 'remaining seconds missing'
+assert b[0]>=f[2], 'cancel overlaps the draft'
+assert any(re.fullmatch(r'Cancel · \d+ s',n.get('text','')) for n in nodes), 'remaining seconds missing'
 assert not any(n.get('text','').startswith('Sending in ') for n in nodes), 'top banner remains'
 PY
 }
@@ -172,7 +172,7 @@ if [ "$(db "SELECT COUNT(*) FROM messages WHERE body='$TOKEN cancel';")" = 0 ]; 
 tap_retry Send
 tap_edittext_retry
 sleep 0.5
-adb_ shell input keyevent KEYCODE_MOVE_END
+adb_ shell input keycombination KEYCODE_CTRL_LEFT KEYCODE_MOVE_END
 type_text " edited"
 sleep 1
 dump_ui_retry
