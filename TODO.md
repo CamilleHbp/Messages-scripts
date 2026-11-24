@@ -2296,3 +2296,7 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] Recover fresh text drafts after rotation and process death, and show the count and caption of staged photos in both inbox layouts.
 - [x] Show the recipient, content, photo count and SIM during interrupted-send review, with explicit Send now and Keep as draft actions.
 - [x] Offer Contacts access during recipient name searches and keep direct number entry available.
+
+- [x] Preserve photo captions and the sending SIM on retry, and offer a separate 48 dp SIM chooser beside the failed bubble.
+- [x] Enlarge inline photos from interrupted-send review and return to the same review without sending.
+- [x] Apply the draft-preview preference to text and photo captions in both inbox layouts.
