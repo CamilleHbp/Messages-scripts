@@ -172,13 +172,20 @@ if [ "$(db "SELECT COUNT(*) FROM messages WHERE body='$TOKEN cancel';")" = 0 ]; 
 tap_retry Send
 tap_edittext_retry
 sleep 0.5
-adb_ shell input keycombination KEYCODE_CTRL_LEFT KEYCODE_MOVE_END
 type_text " edited"
 sleep 1
 dump_ui_retry
-if grep -q "$TOKEN cancel edited" "$TMP/ui.xml" && ! grep -q 'content-desc="Cancel"' "$TMP/ui.xml"; then pass 'editing cancels countdown and retains edited draft'; else fail 'editing must cancel without losing text'; fi
+if python3 - "$TMP/ui.xml" "$TOKEN cancel" <<'PYEDIT'
+import sys, xml.etree.ElementTree as ET
+nodes = list(ET.parse(sys.argv[1]).iter('node'))
+field = next(n for n in nodes if n.get('class') == 'android.widget.EditText')
+edited = field.get('text', '')
+assert ' edited' in edited and edited.replace(' edited', '', 1) == sys.argv[2], edited
+assert not any(n.get('content-desc') == 'Cancel' for n in nodes)
+PYEDIT
+then pass 'editing cancels countdown and retains edited draft'; else fail 'editing must cancel without losing text'; fi
 sleep 31
-if [ "$(db "SELECT COUNT(*) FROM messages WHERE body LIKE '$TOKEN cancel%';")" = 0 ]; then pass 'cancelled countdown never sends later'; else fail 'cancelled countdown sent after deadline'; fi
+if [ "$(db "SELECT COUNT(*) FROM messages WHERE conversation_id=$CONV AND is_me=1;")" = 0 ]; then pass 'cancelled countdown never sends later'; else fail 'cancelled countdown sent after deadline'; fi
 
 set_delay 3
 db "UPDATE conversations SET draft='$TOKEN auto' WHERE id=$CONV;" >/dev/null
