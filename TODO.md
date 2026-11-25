@@ -2242,3 +2242,5 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] One scheduled message with inline +N overflow; hidden messages remain accessible in the queue sheet.
 - [x] ScheduledTrayTest updated for one visible slot and promotion after removal; 885 app JVM tests passed.
 - [x] test-scheduled-tray.sh asserts one visible row and inline overflow; failed on the previous two-row APK and passed all 18 checks on the compact build.
+
+- [x] Verify actionable scheduled previews, dated cancellation confirmation, and rescheduling across both Back controls.

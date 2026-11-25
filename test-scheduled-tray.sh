@@ -121,16 +121,16 @@ if mode in ('has', 'has_regex'):
 if mode == 'count':
     print(len(nodes))
     sys.exit()
-if mode == 'manage':
-    candidates = []
+if mode == 'row_time':
     for node in nodes:
-        while node is not None:
-            icons = [n for n in node.iter('node') if n.get('content-desc') == 'Manage scheduled messages']
-            if len(icons) == 1:
-                candidates.append(icons[0])
-                break
+        while node is not None and node.get('clickable') != 'true':
             node = parents.get(node)
-    nodes = candidates
+        if node is not None:
+            times = [t for child in node.iter('node') for t in strings(child) if t.startswith('Scheduled for ')]
+            if len(times) == 1:
+                print(times[0])
+                sys.exit(0)
+    sys.exit(1)
 if not nodes:
     sys.exit(1)
 node = nodes[0]
@@ -158,11 +158,12 @@ tap() {
     adb_ shell input tap $xy >/dev/null
 }
 manage() {
-    local xy
     fresh_ui || return 1
-    xy=$(ui_query manage "$1") || return 1
+    SELECTED_TIME=$(ui_query row_time "$1") || return 1
+    local xy
+    xy=$(ui_query tap "$1") || return 1
     adb_ shell input tap $xy >/dev/null
-    wait_text "Cancel scheduled message"
+    wait_text "Cancel scheduled message" && ui_query has "$SELECTED_TIME" && ui_query has "$1"
 }
 assert_db() {
     local actual i
@@ -195,7 +196,7 @@ if ui_query has "$SECOND" || ui_query has "$THIRD" || ui_query has "$CONTROL"; t
     fatal "collapsed tray shows more than one schedule or another conversation"
 fi
 pass "only the next scheduled message is visible"
-[ "$(ui_query count 'Manage scheduled messages')" = "1" ] && pass "collapsed tray has one management icon" || fatal "collapsed tray does not expose one management icon"
+ui_query row_time "$FIRST" >/dev/null && pass "next message and time share one actionable target" || fatal "preview and scheduled time are outside the management target"
 ui_query has '+2 more' && pass "overflow reports two additional schedules" || fatal "overflow control missing"
 if python3 - "$TMP/ui.xml" "$FIRST" '+2 more' <<'PY'
 import re, sys, xml.etree.ElementTree as ET
@@ -221,7 +222,7 @@ done
 info "Reschedule from the conversation, preserving body and identity"
 THIRD_ID=$(db "SELECT id FROM scheduled_messages WHERE body='$THIRD';")
 tap 'Change send time' || fatal "reschedule action missing"
-wait_text 'Schedule' || fatal "date picker did not open"
+wait_text 'Next' || fatal "date picker did not open"
 NEXT_MONTH=$(python3 - "$TMP/ui.xml" <<'PY_MONTH'
 import calendar, re, sys, xml.etree.ElementTree as ET
 months = list(calendar.month_name)
@@ -241,8 +242,15 @@ wait_text "$NEXT_MONTH" || fatal "calendar did not advance to $NEXT_MONTH"
 DAY_ONE_PATTERN="(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday), ${NEXT_MONTH% *} 1, ${NEXT_MONTH##* }"
 DAY_ONE_CENTER=$(ui_query tap_regex "$DAY_ONE_PATTERN") || fatal "cannot find the first day of $NEXT_MONTH"
 adb_ shell input tap $DAY_ONE_CENTER >/dev/null
-tap 'Schedule' || fatal "cannot confirm reschedule date"
+tap 'Next' || fatal "cannot continue to the time picker"
 wait_text 'Select time' || fatal "time picker did not open"
+CHOSEN_DAY="${NEXT_MONTH% *} 1, ${NEXT_MONTH##* }"
+ui_query has "$CHOSEN_DAY" || fatal "time picker omits the chosen date"
+tap 'Back' && wait_text "$NEXT_MONTH" || fatal "Back reset the selected calendar month"
+tap 'Next' && wait_text "$CHOSEN_DAY" || fatal "Back lost the selected day"
+adb_ shell input keyevent KEYCODE_BACK
+wait_text "$NEXT_MONTH" && tap 'Next' && wait_text "$CHOSEN_DAY" || fatal "system Back lost the reschedule selection"
+pass "both Back controls preserve the chosen date through time review"
 tap 'Schedule' || fatal "cannot confirm reschedule time"
 assert_db "reschedule changes timestamp on the existing row" "SELECT COUNT(*) FROM scheduled_messages WHERE id=$THIRD_ID AND body='$THIRD' AND conversation_id=$CONV AND timestamp>$((FUTURE + 7200000));" 1 || finish
 wait_text "$FIRST" || fatal "tray did not return after rescheduling"
@@ -260,12 +268,19 @@ ui_query has "$THIRD" && fatal "second remaining schedule appears outside overfl
 
 info "Cancel removes only the selected schedule"
 manage "$SECOND" || fatal "second schedule cannot be managed"
-tap 'Cancel scheduled message' || fatal "cancellation action failed"
+tap 'Cancel scheduled message' || fatal "cannot review cancellation"
+wait_text 'Keep scheduled' && ui_query has "$SECOND" && ui_query has "$SELECTED_TIME" || fatal "confirmation omits the selected message or its time"
+assert_db "schedule is preserved during confirmation" "SELECT COUNT(*) FROM scheduled_messages WHERE body='$SECOND';" 1 || finish
+tap 'Keep scheduled' && wait_text 'Change send time' || fatal "Keep scheduled did not return to management"
+tap 'Cancel scheduled message' && wait_text 'Keep scheduled' || fatal "cannot reopen confirmation"
+adb_ shell input keyevent KEYCODE_BACK
+wait_text 'Change send time' || fatal "system Back did not leave the schedule intact"
+tap 'Cancel scheduled message' && wait_text 'Keep scheduled' && tap 'Cancel scheduled message' || fatal "explicit cancellation failed"
 assert_db "canceled schedule is removed" "SELECT COUNT(*) FROM scheduled_messages WHERE body='$SECOND';" 0 || finish
 assert_db "cancel does not send the canceled text" "SELECT COUNT(*) FROM messages WHERE body='$SECOND';" 0 || finish
 assert_db "rescheduled row and other conversation survive" "SELECT COUNT(*) FROM scheduled_messages WHERE body IN ('$THIRD','$CONTROL');" 2 || finish
 wait_text "$THIRD" || fatal "remaining schedule disappeared"
 ui_query has "$SECOND" && fatal "canceled text still appears in the tray"
 ui_query has '+1 more' && fatal "overflow remains with only one schedule"
-[ "$(ui_query count 'Manage scheduled messages')" = "1" ] && pass "tray shrinks to its remaining schedule" || fatal "tray did not shrink after cancellation"
+ui_query row_time "$THIRD" >/dev/null && pass "remaining schedule is independently actionable" || fatal "remaining schedule cannot be managed"
 finish
