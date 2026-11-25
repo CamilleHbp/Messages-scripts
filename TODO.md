@@ -2308,3 +2308,5 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] Keep outstanding photo repairs and SIM selection beside send confirmation, with a remaining count and positional accessibility labels.
 
 - [x] Verify actionable scheduled previews, dated cancellation confirmation, and rescheduling across both Back controls.
+
+- [x] Explain failed scheduled sends, preserve recoverable queue entries, and retry a radio-off SMS exactly once after service returns.
