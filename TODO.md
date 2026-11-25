@@ -2306,3 +2306,5 @@ subscription, invalidated on resume so a SIM swap is picked up.
 
 - [x] Present failed group recipients first, show known radio and service errors, and exclude blocked recipients from retry.
 - [x] Keep outstanding photo repairs and SIM selection beside send confirmation, with a remaining count and positional accessibility labels.
+
+- [x] Verify actionable scheduled previews, dated cancellation confirmation, and rescheduling across both Back controls.
