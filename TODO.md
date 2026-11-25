@@ -2244,3 +2244,5 @@ subscription, invalidated on resume so a SIM swap is picked up.
 - [x] test-scheduled-tray.sh asserts one visible row and inline overflow; failed on the previous two-row APK and passed all 18 checks on the compact build.
 
 - [x] Verify actionable scheduled previews, dated cancellation confirmation, and rescheduling across both Back controls.
+
+- [x] Explain failed scheduled sends, preserve recoverable queue entries, and retry a radio-off SMS exactly once after service returns.
